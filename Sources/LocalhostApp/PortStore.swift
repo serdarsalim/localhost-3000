@@ -5,7 +5,8 @@ struct PortStore {
     private let defaults = UserDefaults.standard
 
     func load() -> [String: Int] {
-        defaults.dictionary(forKey: key) as? [String: Int] ?? [:]
+        guard let raw = defaults.dictionary(forKey: key) else { return [:] }
+        return raw.compactMapValues { $0 as? Int }
     }
 
     func save(_ ports: [String: Int]) {
