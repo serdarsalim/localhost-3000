@@ -41,40 +41,79 @@ final class AppModel: ObservableObject {
         let ports = portStore.assign(to: appNames)
         let runningNames = Set(appNames.filter { processManager.isRunning(name: $0) })
 
-        let gitStatuses: [String: GitStatus] = await withTaskGroup(of: (String, GitStatus).self) { group in
+        // Run git checks, port checks, and external process scan in parallel
+        async let gitTask = withTaskGroup(of: (String, GitStatus).self) { group in
             for name in appNames {
                 let appDir = root.appendingPathComponent(name)
                 group.addTask { (name, await GitClient.status(at: appDir)) }
             }
-            var results: [String: GitStatus] = [:]
-            for await (name, git) in group { results[name] = git }
-            return results
+            var r: [String: GitStatus] = [:]
+            for await (name, git) in group { r[name] = git }
+            return r
         }
 
-        let portListening: [String: Bool] = await withTaskGroup(of: (String, Bool).self) { group in
+        async let portTask = withTaskGroup(of: (String, Bool).self) { group in
             for name in appNames {
                 let port = ports[name] ?? 3000
                 group.addTask { (name, SystemClient.isPortListening(port)) }
             }
-            var results: [String: Bool] = [:]
-            for await (name, listening) in group { results[name] = listening }
-            return results
+            var r: [String: Bool] = [:]
+            for await (name, listening) in group { r[name] = listening }
+            return r
         }
 
+        async let detectTask = Task.detached { SystemClient.detectRunningServers() }.value
+
+        let (gitStatuses, portListening, detected) = await (gitTask, portTask, detectTask)
+
+        // Build a lookup: project directory path -> DetectedServer
+        let detectedByDir: [String: DetectedServer] = Dictionary(
+            detected.map { ($0.directory, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
         apps = appNames.map { name in
+            let appDir = root.appendingPathComponent(name).path
+            let assignedPort = ports[name] ?? 3000
             let weStartedIt = runningNames.contains(name)
-            let listening = portListening[name] ?? false
-            let status: PortStatus = switch (weStartedIt, listening) {
-                case (true,  true):  .running
-                case (true,  false): .crashed
-                case (false, true):  .external
-                case (false, false): .free
+            let assignedPortListening = portListening[name] ?? false
+            let externalServer = detectedByDir[appDir]
+
+            let status: PortStatus
+            let detectedPort: Int?
+            let externalPID: Int32?
+
+            if weStartedIt && assignedPortListening {
+                status = .running
+                detectedPort = nil
+                externalPID = nil
+            } else if weStartedIt && !assignedPortListening {
+                status = .crashed
+                detectedPort = nil
+                externalPID = nil
+            } else if let server = externalServer {
+                // A node process is running in this project's directory
+                status = .detached
+                detectedPort = server.port
+                externalPID = server.pid
+            } else if assignedPortListening {
+                // Something else is on the assigned port but not this project
+                status = .external
+                detectedPort = nil
+                externalPID = nil
+            } else {
+                status = .free
+                detectedPort = nil
+                externalPID = nil
             }
+
             return DevApp(
                 name: name,
-                port: ports[name] ?? 3000,
+                port: assignedPort,
                 isRunning: weStartedIt,
                 portStatus: status,
+                detectedPort: detectedPort,
+                externalPID: externalPID,
                 gitStatus: gitStatuses[name] ?? .unknown
             )
         }
@@ -87,15 +126,22 @@ final class AppModel: ObservableObject {
     }
 
     func stop(app: DevApp) {
-        processManager.stop(name: app.name)
-        update(app.name) { $0.isRunning = false; $0.portStatus = .free }
+        if app.isRunning {
+            processManager.stop(name: app.name)
+        } else if let pid = app.externalPID {
+            kill(pid, SIGTERM)
+        }
+        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil }
     }
 
     func stopAll() {
         processManager.stopAll()
         for idx in apps.indices {
+            if let pid = apps[idx].externalPID { kill(pid, SIGTERM) }
             apps[idx].isRunning = false
             apps[idx].portStatus = .free
+            apps[idx].detectedPort = nil
+            apps[idx].externalPID = nil
         }
     }
 

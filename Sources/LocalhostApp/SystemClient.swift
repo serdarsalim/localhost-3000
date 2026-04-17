@@ -1,23 +1,6 @@
 import AppKit
 import Darwin
 
-extension SystemClient {
-    static func isPortListening(_ port: Int) -> Bool {
-        let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
-        guard sock >= 0 else { return false }
-        defer { Darwin.close(sock) }
-        var addr = sockaddr_in()
-        addr.sin_family = sa_family_t(AF_INET)
-        addr.sin_port = in_port_t(port).byteSwapped
-        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
-        return withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
-            }
-        }
-    }
-}
-
 enum SystemClient {
     static func lanIPAddress() -> String {
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
@@ -67,4 +50,73 @@ enum SystemClient {
         guard let url = URL(string: "http://localhost:\(port)") else { return }
         NSWorkspace.shared.open(url)
     }
+
+    static func isPortListening(_ port: Int) -> Bool {
+        let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { Darwin.close(sock) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(port).byteSwapped
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        return withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+            }
+        }
+    }
+
+    // Find all node processes listening on TCP, mapped to their working directories.
+    static func detectRunningServers() -> [DetectedServer] {
+        // Step 1: (pid -> port) for listening node processes
+        let listenLines = runCommand("/usr/sbin/lsof", ["-c", "node", "-iTCP", "-sTCP:LISTEN", "-nP"])
+            .components(separatedBy: "\n").dropFirst()
+        var pidPorts: [Int32: Int] = [:]
+        for line in listenLines {
+            let parts = line.split(separator: " ", omittingEmptySubsequences: true)
+            guard parts.count >= 9, let pid = Int32(parts[1]) else { continue }
+            let name = String(parts[8])
+            if let port = name.split(separator: ":").last.flatMap({ Int($0) }) {
+                pidPorts[pid] = port
+            }
+        }
+        guard !pidPorts.isEmpty else { return [] }
+
+        // Step 2: (pid -> cwd) for those PIDs
+        let pidList = pidPorts.keys.map { "\($0)" }.joined(separator: ",")
+        let cwdLines = runCommand("/usr/sbin/lsof", ["-p", pidList, "-a", "-d", "cwd", "-Fn"])
+            .components(separatedBy: "\n")
+
+        var results: [DetectedServer] = []
+        var currentPid: Int32 = 0
+        for line in cwdLines {
+            if line.hasPrefix("p"), let pid = Int32(line.dropFirst()) {
+                currentPid = pid
+            } else if line.hasPrefix("n"), currentPid != 0, let port = pidPorts[currentPid] {
+                let dir = String(line.dropFirst())
+                if !dir.isEmpty {
+                    results.append(DetectedServer(pid: currentPid, port: port, directory: dir))
+                }
+            }
+        }
+        return results
+    }
+
+    private static func runCommand(_ path: String, _ args: [String]) -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: path)
+        p.arguments = args
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+        try? p.run()
+        p.waitUntilExit()
+        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    }
+}
+
+struct DetectedServer: Sendable {
+    let pid: Int32
+    let port: Int
+    let directory: String
 }

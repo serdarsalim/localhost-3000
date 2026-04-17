@@ -3,7 +3,8 @@ import Foundation
 enum PortStatus: Sendable, Hashable {
     case free      // stopped, port available
     case running   // we started it, port is responding
-    case external  // something else is listening on this port
+    case detached  // running in this project's directory but started outside the app
+    case external  // something else is on the assigned port (different project)
     case crashed   // we started it but it stopped responding
 }
 
@@ -13,6 +14,8 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var port: Int
     var isRunning: Bool
     var portStatus: PortStatus
+    var detectedPort: Int?   // actual port the server bound to (may differ from assigned)
+    var externalPID: Int32?  // PID of a detached process we can kill
     var gitStatus: GitStatus
 }
 

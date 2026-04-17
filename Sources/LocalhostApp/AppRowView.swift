@@ -37,6 +37,7 @@ struct AppRowView: View {
     private var dotColor: Color {
         switch app.portStatus {
         case .running:  .green
+        case .detached: .green
         case .crashed:  .red
         case .external: .orange
         case .free:     Color.secondary.opacity(0.25)
@@ -46,8 +47,9 @@ struct AppRowView: View {
     private var dotTooltip: String {
         switch app.portStatus {
         case .running:  "Running on :\(app.port)"
+        case .detached: "Running on :\(app.detectedPort ?? app.port) (started outside this app)"
         case .crashed:  "Crashed — was running on :\(app.port) but stopped responding"
-        case .external: "Port \(app.port) is in use by an external process"
+        case .external: "Port \(app.port) is in use by an unrelated process"
         case .free:     "Stopped"
         }
     }
@@ -93,15 +95,15 @@ struct AppRowView: View {
                     .foregroundStyle(.secondary)
                 }
             } else {
-                Text(verbatim: "\(app.port)")
+                Text(verbatim: "\(app.detectedPort ?? app.port)")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .onTapGesture {
-                        guard !app.isRunning else { return }
+                        guard !app.isRunning && app.portStatus != .detached else { return }
                         portDraft = "\(app.port)"
                         editingPort = true
                     }
-                    .help(app.isRunning ? "Stop the server to change its port" : "Click to edit port")
+                    .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
             }
         }
         .frame(width: 100, alignment: .leading)
@@ -144,11 +146,14 @@ struct AppRowView: View {
         .frame(width: 110, alignment: .leading)
     }
 
+    private var activePort: Int { app.detectedPort ?? app.port }
+    private var isActive: Bool { app.isRunning || app.portStatus == .detached }
+
     private var actionButtons: some View {
         HStack(spacing: 8) {
-            if app.isRunning {
+            if isActive {
                 Button {
-                    SystemClient.openBrowser(port: app.port)
+                    SystemClient.openBrowser(port: activePort)
                 } label: {
                     Image(systemName: "globe")
                 }
@@ -157,7 +162,7 @@ struct AppRowView: View {
                 .foregroundStyle(.blue)
 
                 Button {
-                    SystemClient.copyNetworkURL(port: app.port)
+                    SystemClient.copyNetworkURL(port: activePort)
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
                 } label: {
@@ -175,7 +180,7 @@ struct AppRowView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .popover(isPresented: $showQR, arrowEdge: .bottom) {
-                    QRPopover(port: app.port)
+                    QRPopover(port: activePort)
                 }
             }
 
@@ -204,7 +209,7 @@ struct AppRowView: View {
 
     @ViewBuilder
     private var startStopButton: some View {
-        if app.isRunning || app.portStatus == .crashed {
+        if app.isRunning || app.portStatus == .crashed || app.portStatus == .detached {
             Button("Stop") { model.stop(app: app) }
                 .foregroundStyle(.red)
                 .frame(width: 44)
