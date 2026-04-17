@@ -20,6 +20,8 @@ struct NativeTextField: NSViewRepresentable {
     }
 
     func updateNSView(_ field: NSTextField, context: Context) {
+        // Always refresh the closure so it captures current SwiftUI state
+        context.coordinator.onCommit = onCommit
         if field.stringValue != text { field.stringValue = text }
     }
 
@@ -37,7 +39,16 @@ struct NativeTextField: NSViewRepresentable {
             text = field.stringValue
         }
 
-        // Pass the raw field value directly — don't rely on the binding being flushed yet
+        // Handle Enter and Tab — resign first responder, which triggers controlTextDidEndEditing
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            if selector == #selector(NSResponder.insertNewline(_:)) ||
+               selector == #selector(NSResponder.insertTab(_:)) {
+                control.window?.makeFirstResponder(nil)
+                return true
+            }
+            return false
+        }
+
         func controlTextDidEndEditing(_ obj: Notification) {
             guard let field = obj.object as? NSTextField else { return }
             onCommit(field.stringValue)
