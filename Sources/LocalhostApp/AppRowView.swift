@@ -36,24 +36,30 @@ struct AppRowView: View {
         Group {
             if editingPort {
                 HStack(spacing: 4) {
+                    VStack(spacing: 0) {
+                        Button { nudgePort(by: 1) } label: {
+                            Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        Button { nudgePort(by: -1) } label: {
+                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .foregroundStyle(.secondary)
                     TextField("", text: $portDraft)
                         .frame(width: 52)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                         .onSubmit { savePort() }
-                    Button {
-                        savePort()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
+                        .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
+                    Button { savePort() } label: {
+                        Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.green)
-                    Button {
-                        editingPort = false
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
+                    Button { editingPort = false } label: {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
@@ -77,6 +83,11 @@ struct AppRowView: View {
             model.updatePort(for: app, port: port)
         }
         editingPort = false
+    }
+
+    private func nudgePort(by delta: Int) {
+        let current = Int(portDraft) ?? app.port
+        portDraft = "\(current + delta)"
     }
 
     private var gitBadge: some View {
