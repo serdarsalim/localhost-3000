@@ -88,7 +88,7 @@ struct DashboardView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 12) {
             Button("Stop All") { model.stopAll() }
                 .foregroundStyle(.red)
 
