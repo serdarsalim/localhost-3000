@@ -1,0 +1,6 @@
+.build/
+dist/
+.DS_Store
+*.o
+*.d
+make-icon.swift
