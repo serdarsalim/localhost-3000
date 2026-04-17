@@ -1,10 +1,19 @@
-# Localhost 3000 — Claude Instructions
+# Localhost 3000 — Agent Instructions
 
 ## What this is
 
 A native macOS app (Swift 6, SwiftUI, macOS 14+) that scans a portfolio folder for npm projects and lets you start/stop their dev servers, see git status, edit ports, and open each project in the browser, terminal, VS Code, or Finder.
 
 No Xcode. Built entirely with Swift Package Manager.
+
+## Rules for agents
+
+After every code change — bug fix, feature, tweak, anything — always:
+1. Run `./build-app.sh` to rebuild the app
+2. Kill the running instance and relaunch: `pkill -f "Localhost 3000"; sleep 0.5; open "dist/Localhost 3000.app"`
+3. Commit and push the change to GitHub
+
+Do not ask the user if they want this done. Just do it every time.
 
 ## Build & run
 
