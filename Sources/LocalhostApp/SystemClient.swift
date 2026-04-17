@@ -28,15 +28,10 @@ enum SystemClient {
     }
 
     static func openTerminal(at url: URL) {
-        let escaped = url.path.replacingOccurrences(of: "\"", with: "\\\"")
-        let script = """
-        tell application "Terminal"
-            do script "cd \\"\(escaped)\\""
-            activate
-        end tell
-        """
-        var error: NSDictionary?
-        NSAppleScript(source: script)?.executeAndReturnError(&error)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-a", "Terminal", url.path]
+        try? process.run()
     }
 
     static func openVSCode(at url: URL) {
