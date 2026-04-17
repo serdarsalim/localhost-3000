@@ -6,6 +6,7 @@ struct AppRowView: View {
     @State private var editingPort = false
     @State private var portDraft = ""
     @State private var copied = false
+    @FocusState private var portFocused: Bool
 
     var body: some View {
         HStack(spacing: 14) {
@@ -40,7 +41,11 @@ struct AppRowView: View {
                         .frame(width: 52)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
+                        .focused($portFocused)
                         .onSubmit { commitPort() }
+                        .onChange(of: portFocused) { _, focused in
+                            if !focused { commitPort() }
+                        }
                         .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
                     VStack(spacing: 0) {
                         Button { nudgePort(by: 1) } label: {
