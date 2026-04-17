@@ -1,5 +1,7 @@
 import SwiftUI
 import AppKit
+import Combine
+import ServiceManagement
 
 @main
 struct LocalhostApp: App {
@@ -8,18 +10,26 @@ struct LocalhostApp: App {
     var body: some Scene {
         WindowGroup("Localhost 3000") {
             ContentView()
+                .environmentObject(appDelegate.model)
         }
         .windowResizability(.contentMinSize)
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
     private var statusItem: NSStatusItem?
+    private var cancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         setupMenuBarIcon()
+
+        cancellable = model.$apps
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.rebuildMenu() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -30,30 +40,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Localhost")
-            button.action = #selector(toggleWindow)
-            button.target = self
+        }
+        rebuildMenu()
+    }
+
+    private func rebuildMenu() {
+        let menu = NSMenu()
+        let quickLaunch = UserDefaults.standard.bool(forKey: "menuBarQuickLaunch")
+
+        if quickLaunch && !model.apps.isEmpty {
+            for app in model.apps {
+                let indicator = app.isRunning ? "⏹" : "▶"
+                let item = NSMenuItem(
+                    title: "\(indicator)  \(app.name)  :\(app.port)",
+                    action: #selector(toggleApp(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = app.name
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
         }
 
-        let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Show Localhost", action: #selector(showWindow), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem?.menu = menu
     }
 
-    @objc private func toggleWindow() {
-        if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.orderOut(nil)
-        } else {
-            showWindow()
-        }
+    @objc private func toggleApp(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String,
+              let app = model.apps.first(where: { $0.name == name }) else { return }
+        if app.isRunning { model.stop(app: app) } else { model.start(app: app) }
+        rebuildMenu()
     }
 
     @objc private func showWindow() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first {
-            window.makeKeyAndOrderFront(nil)
-        }
+        NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
 }

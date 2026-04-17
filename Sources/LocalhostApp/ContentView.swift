@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct ContentView: View {
-    @StateObject private var model = AppModel()
+    @EnvironmentObject private var model: AppModel
     @AppStorage("colorScheme") private var schemeRaw: String = "system"
 
     private var preferredScheme: ColorScheme? {
@@ -53,6 +53,7 @@ struct DashboardView: View {
     @ObservedObject var model: AppModel
     @Binding var schemeRaw: String
     @State private var showHelp = false
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,6 +73,7 @@ struct DashboardView: View {
         }
         .task { await model.refresh() }
         .sheet(isPresented: $showHelp) { HelpView() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 
     private var toolbar: some View {
@@ -93,6 +95,7 @@ struct DashboardView: View {
                 .keyboardShortcut("r", modifiers: .command)
             Button("Change Folder") { pickFolder(model: model) }
             Button("Help") { showHelp = true }
+            Button("Settings") { showSettings = true }
             Spacer()
             Button {
                 schemeRaw = schemeRaw == "dark" ? "light" : "dark"

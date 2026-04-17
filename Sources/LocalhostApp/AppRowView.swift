@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreImage
 
 struct AppRowView: View {
     let app: DevApp
@@ -6,6 +7,7 @@ struct AppRowView: View {
     @State private var editingPort = false
     @State private var portDraft = ""
     @State private var copied = false
+    @State private var showQR = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -134,6 +136,16 @@ struct AppRowView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(copied ? .green : .secondary)
                 .animation(.easeInOut(duration: 0.2), value: copied)
+
+                Button { showQR = true } label: {
+                    Image(systemName: "qrcode")
+                }
+                .help("Show QR code to open on another device")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .popover(isPresented: $showQR, arrowEdge: .bottom) {
+                    QRPopover(port: app.port)
+                }
             }
 
             Button { model.openTerminal(for: app) } label: {
@@ -165,5 +177,44 @@ struct AppRowView: View {
         }
         .foregroundStyle(app.isRunning ? .red : .green)
         .frame(width: 44)
+    }
+}
+
+struct QRPopover: View {
+    let port: Int
+
+    private var networkURL: String {
+        "http://\(SystemClient.lanIPAddress()):\(port)"
+    }
+
+    private var qrImage: Image? {
+        guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+        filter.setValue(Data(networkURL.utf8), forKey: "inputMessage")
+        filter.setValue("M", forKey: "inputCorrectionLevel")
+        guard let ciImage = filter.outputImage else { return nil }
+        let scaled = ciImage.transformed(by: CGAffineTransform(scaleX: 8, y: 8))
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
+        let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: scaled.extent.width, height: scaled.extent.height))
+        return Image(nsImage: nsImage)
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if let image = qrImage {
+                image
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 180, height: 180)
+            } else {
+                Text("QR unavailable").foregroundStyle(.secondary)
+            }
+            Text(networkURL)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .frame(width: 212)
     }
 }
