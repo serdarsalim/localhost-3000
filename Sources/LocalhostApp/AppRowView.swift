@@ -36,9 +36,12 @@ struct AppRowView: View {
         Group {
             if editingPort {
                 HStack(spacing: 2) {
-                    NativeTextField(text: $portDraft, onCommit: commitPort)
-                        .frame(width: 52, height: 22)
-                        .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
+                    NativeTextField(text: $portDraft) { value in
+                        if let port = Int(value) { model.updatePort(for: app, port: port) }
+                        editingPort = false
+                    }
+                    .frame(width: 52, height: 22)
+                    .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
                     VStack(spacing: 0) {
                         Button { nudgePort(by: 1) } label: {
                             Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold))

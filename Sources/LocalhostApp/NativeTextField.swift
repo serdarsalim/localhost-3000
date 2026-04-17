@@ -3,7 +3,7 @@ import AppKit
 
 struct NativeTextField: NSViewRepresentable {
     @Binding var text: String
-    var onCommit: () -> Void
+    var onCommit: (String) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(text: $text, onCommit: onCommit) }
 
@@ -25,9 +25,9 @@ struct NativeTextField: NSViewRepresentable {
 
     class Coordinator: NSObject, NSTextFieldDelegate {
         @Binding var text: String
-        var onCommit: () -> Void
+        var onCommit: (String) -> Void
 
-        init(text: Binding<String>, onCommit: @escaping () -> Void) {
+        init(text: Binding<String>, onCommit: @escaping (String) -> Void) {
             _text = text
             self.onCommit = onCommit
         }
@@ -37,9 +37,10 @@ struct NativeTextField: NSViewRepresentable {
             text = field.stringValue
         }
 
-        // fires on Enter, Tab, or clicking anywhere outside
+        // Pass the raw field value directly — don't rely on the binding being flushed yet
         func controlTextDidEndEditing(_ obj: Notification) {
-            onCommit()
+            guard let field = obj.object as? NSTextField else { return }
+            onCommit(field.stringValue)
         }
     }
 }
