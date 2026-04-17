@@ -1,0 +1,79 @@
+{
+  "": {
+    "dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/LocalhostApp.d",
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/LocalhostApp.o",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/master.swiftdeps"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/App.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/App.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/App~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/App.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/App.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/AppModel.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppModel.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppModel~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppModel.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppModel.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/AppRowView.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppRowView.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppRowView~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppRowView.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppRowView.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/AppScanner.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppScanner.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppScanner~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppScanner.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/AppScanner.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/ContentView.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ContentView.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ContentView.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ContentView.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/GitClient.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/GitClient.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/GitClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/GitClient.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/GitClient.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/HelpView.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/HelpView.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/HelpView~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/HelpView.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/HelpView.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/Models.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/Models.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/Models.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/Models.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/PortStore.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/PortStore.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/PortStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/PortStore.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/PortStore.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/ProcessManager.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ProcessManager.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ProcessManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ProcessManager.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ProcessManager.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/ScrollWheelModifier.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ScrollWheelModifier.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ScrollWheelModifier~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ScrollWheelModifier.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/ScrollWheelModifier.dia"
+  },
+  "/Users/slm/my-portfolio/localhost-3000/Sources/LocalhostApp/SystemClient.swift": {
+    "object": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/SystemClient.swift.o",
+    "swiftmodule": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/SystemClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/SystemClient.swiftdeps",
+    "diagnostics": "/Users/slm/my-portfolio/localhost-3000/.build/arm64-apple-macosx/release/LocalhostApp.build/SystemClient.dia"
+  }
+}
