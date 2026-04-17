@@ -6,8 +6,13 @@ struct AppRowView: View {
     @ObservedObject var model: AppModel
     @State private var editingPort = false
     @State private var portDraft = ""
+    @State private var portConflict = false
     @State private var copied = false
     @State private var showQR = false
+
+    private var takenPorts: Set<Int> {
+        Set(model.apps.filter { $0.name != app.name }.map { $0.port })
+    }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -53,13 +58,15 @@ struct AppRowView: View {
                         .frame(width: 52)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(portConflict ? .red : .primary)
                         .onSubmit { savePort() }
                         .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
+                        .onChange(of: portDraft) { _, _ in portConflict = false }
                     Button { savePort() } label: {
                         Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(portConflict ? .red : .green)
                     Button { editingPort = false } label: {
                         Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
                     }
@@ -81,15 +88,19 @@ struct AppRowView: View {
     }
 
     private func savePort() {
-        if let port = Int(portDraft) {
-            model.updatePort(for: app, port: port)
+        guard let port = Int(portDraft) else { editingPort = false; return }
+        if takenPorts.contains(port) {
+            portConflict = true
+            return
         }
+        model.updatePort(for: app, port: port)
         editingPort = false
     }
 
     private func nudgePort(by delta: Int) {
-        let current = Int(portDraft) ?? app.port
-        portDraft = "\(current + delta)"
+        var next = (Int(portDraft) ?? app.port) + delta
+        while takenPorts.contains(next) { next += delta }
+        portDraft = "\(next)"
     }
 
     private var gitBadge: some View {
