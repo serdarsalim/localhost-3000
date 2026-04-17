@@ -78,10 +78,11 @@ struct AppRowView: View {
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .onTapGesture {
+                        guard !app.isRunning else { return }
                         portDraft = "\(app.port)"
                         editingPort = true
                     }
-                    .help("Click to edit port")
+                    .help(app.isRunning ? "Stop the server to change its port" : "Click to edit port")
             }
         }
         .frame(width: 100, alignment: .leading)
