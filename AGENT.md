@@ -12,6 +12,7 @@ After every code change — bug fix, feature, tweak, anything — always:
 1. Run `./build-app.sh` to rebuild the app
 2. Kill the running instance and relaunch: `pkill -f "Localhost 3000"; sleep 0.5; open "dist/Localhost 3000.app"`
 3. Commit and push the change to GitHub
+4. Upload the zip to the GitHub release: `gh release upload v0.1.0 dist/localhost-3000-macos.zip --clobber --repo serdarsalim/localhost-3000`
 
 Do not ask the user if they want this done. Just do it every time.
 
