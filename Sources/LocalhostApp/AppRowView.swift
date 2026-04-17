@@ -29,8 +29,27 @@ struct AppRowView: View {
 
     private var statusDot: some View {
         Circle()
-            .fill(app.isRunning ? Color.green : Color.secondary.opacity(0.25))
+            .fill(dotColor)
             .frame(width: 9, height: 9)
+            .help(dotTooltip)
+    }
+
+    private var dotColor: Color {
+        switch app.portStatus {
+        case .running:  .green
+        case .crashed:  .red
+        case .external: .orange
+        case .free:     Color.secondary.opacity(0.25)
+        }
+    }
+
+    private var dotTooltip: String {
+        switch app.portStatus {
+        case .running:  "Running on :\(app.port)"
+        case .crashed:  "Crashed — was running on :\(app.port) but stopped responding"
+        case .external: "Port \(app.port) is in use by an external process"
+        case .free:     "Stopped"
+        }
     }
 
     private var appName: some View {
@@ -183,12 +202,19 @@ struct AppRowView: View {
         }
     }
 
+    @ViewBuilder
     private var startStopButton: some View {
-        Button(app.isRunning ? "Stop" : "Start") {
-            if app.isRunning { model.stop(app: app) } else { model.start(app: app) }
+        if app.isRunning || app.portStatus == .crashed {
+            Button("Stop") { model.stop(app: app) }
+                .foregroundStyle(.red)
+                .frame(width: 44)
+        } else {
+            Button("Start") { model.start(app: app) }
+                .foregroundStyle(app.portStatus == .external ? Color.secondary : Color.green)
+                .disabled(app.portStatus == .external)
+                .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "")
+                .frame(width: 44)
         }
-        .foregroundStyle(app.isRunning ? .red : .green)
-        .frame(width: 44)
     }
 }
 

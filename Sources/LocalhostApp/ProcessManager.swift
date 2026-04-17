@@ -3,6 +3,8 @@ import Foundation
 @MainActor
 final class ProcessManager {
     private var running: [String: Process] = [:]
+    private var stopping: Set<String> = []
+    var onTerminated: ((String) -> Void)?
 
     func start(name: String, port: Int, in directory: URL) {
         guard !(running[name]?.isRunning == true) else { return }
@@ -22,16 +24,28 @@ final class ProcessManager {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
+        process.terminationHandler = { [weak self, name] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let unexpected = !self.stopping.contains(name)
+                self.stopping.remove(name)
+                self.running.removeValue(forKey: name)
+                if unexpected { self.onTerminated?(name) }
+            }
+        }
+
         try? process.run()
         running[name] = process
     }
 
     func stop(name: String) {
+        stopping.insert(name)
         running[name]?.terminate()
         running.removeValue(forKey: name)
     }
 
     func stopAll() {
+        for name in running.keys { stopping.insert(name) }
         for process in running.values { process.terminate() }
         running.removeAll()
     }

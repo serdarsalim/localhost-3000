@@ -16,6 +16,13 @@ final class AppModel: ObservableObject {
         if let path = defaults.string(forKey: "portfolioRoot") {
             portfolioRoot = URL(fileURLWithPath: path)
         }
+        processManager.onTerminated = { [weak self] name in
+            guard let self else { return }
+            self.update(name) { app in
+                app.isRunning = false
+                app.portStatus = .crashed
+            }
+        }
     }
 
     func setPortfolioRoot(_ url: URL) {
@@ -44,11 +51,30 @@ final class AppModel: ObservableObject {
             return results
         }
 
+        let portListening: [String: Bool] = await withTaskGroup(of: (String, Bool).self) { group in
+            for name in appNames {
+                let port = ports[name] ?? 3000
+                group.addTask { (name, SystemClient.isPortListening(port)) }
+            }
+            var results: [String: Bool] = [:]
+            for await (name, listening) in group { results[name] = listening }
+            return results
+        }
+
         apps = appNames.map { name in
-            DevApp(
+            let weStartedIt = runningNames.contains(name)
+            let listening = portListening[name] ?? false
+            let status: PortStatus = switch (weStartedIt, listening) {
+                case (true,  true):  .running
+                case (true,  false): .crashed
+                case (false, true):  .external
+                case (false, false): .free
+            }
+            return DevApp(
                 name: name,
                 port: ports[name] ?? 3000,
-                isRunning: runningNames.contains(name),
+                isRunning: weStartedIt,
+                portStatus: status,
                 gitStatus: gitStatuses[name] ?? .unknown
             )
         }
@@ -57,17 +83,20 @@ final class AppModel: ObservableObject {
     func start(app: DevApp) {
         guard let root = portfolioRoot else { return }
         processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name))
-        update(app.name) { $0.isRunning = true }
+        update(app.name) { $0.isRunning = true; $0.portStatus = .running }
     }
 
     func stop(app: DevApp) {
         processManager.stop(name: app.name)
-        update(app.name) { $0.isRunning = false }
+        update(app.name) { $0.isRunning = false; $0.portStatus = .free }
     }
 
     func stopAll() {
         processManager.stopAll()
-        for idx in apps.indices { apps[idx].isRunning = false }
+        for idx in apps.indices {
+            apps[idx].isRunning = false
+            apps[idx].portStatus = .free
+        }
     }
 
     func updatePort(for app: DevApp, port: Int) {
