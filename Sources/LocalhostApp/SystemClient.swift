@@ -102,15 +102,17 @@ enum SystemClient {
         return results
     }
 
-    private static func runCommand(_ path: String, _ args: [String]) -> String {
+    private static func runCommand(_ path: String, _ args: [String], timeout: TimeInterval = 4) -> String {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)
         p.arguments = args
         let pipe = Pipe()
         p.standardOutput = pipe
         p.standardError = FileHandle.nullDevice
+        let sem = DispatchSemaphore(value: 0)
+        p.terminationHandler = { _ in sem.signal() }
         try? p.run()
-        p.waitUntilExit()
+        if sem.wait(timeout: .now() + timeout) == .timedOut { p.terminate() }
         return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
 }
