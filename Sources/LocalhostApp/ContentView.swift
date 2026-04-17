@@ -88,26 +88,36 @@ struct DashboardView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 4) {
             Button("Stop All") { model.stopAll() }
                 .foregroundStyle(.red)
-            Button("Refresh") { Task { await model.refresh() } }
+
+            Divider().frame(height: 14).padding(.horizontal, 4)
+
+            footerIcon("arrow.clockwise", help: "Refresh (⌘R)") { Task { await model.refresh() } }
                 .keyboardShortcut("r", modifiers: .command)
-            Button("Change Folder") { pickFolder(model: model) }
-            Button("Help") { showHelp = true }
-            Button("Settings") { showSettings = true }
+            footerIcon("folder.badge.gear", help: "Change folder") { pickFolder(model: model) }
+            footerIcon("questionmark.circle", help: "Help") { showHelp = true }
+            footerIcon("gearshape", help: "Settings") { showSettings = true }
+
             Spacer()
-            Button {
+
+            footerIcon(schemeRaw == "dark" ? "moon.fill" : "sun.max.fill",
+                       help: schemeRaw == "dark" ? "Switch to light mode" : "Switch to dark mode") {
                 schemeRaw = schemeRaw == "dark" ? "light" : "dark"
-            } label: {
-                Image(systemName: schemeRaw == "dark" ? "moon.fill" : "sun.max.fill")
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help(schemeRaw == "dark" ? "Switch to light mode" : "Switch to dark mode")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    private func footerIcon(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(help)
     }
 
     private var appTable: some View {
