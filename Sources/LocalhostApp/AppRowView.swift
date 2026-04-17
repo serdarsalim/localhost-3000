@@ -35,23 +35,27 @@ struct AppRowView: View {
     private var portBadge: some View {
         Group {
             if editingPort {
-                HStack(spacing: 2) {
-                    NativeTextField(text: $portDraft) { value in
-                        if let port = Int(value) { model.updatePort(for: app, port: port) }
+                HStack(spacing: 4) {
+                    TextField("", text: $portDraft)
+                        .frame(width: 52)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .onSubmit { savePort() }
+                    Button {
+                        savePort()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.green)
+                    Button {
                         editingPort = false
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
                     }
-                    .frame(width: 52, height: 22)
-                    .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
-                    VStack(spacing: 0) {
-                        Button { nudgePort(by: 1) } label: {
-                            Image(systemName: "chevron.up").font(.system(size: 8, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        Button { nudgePort(by: -1) } label: {
-                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                 }
             } else {
@@ -65,17 +69,14 @@ struct AppRowView: View {
                     .help("Click to edit port")
             }
         }
-        .frame(width: 80, alignment: .leading)
+        .frame(width: 100, alignment: .leading)
     }
 
-    private func commitPort() {
-        if let port = Int(portDraft) { model.updatePort(for: app, port: port) }
+    private func savePort() {
+        if let port = Int(portDraft) {
+            model.updatePort(for: app, port: port)
+        }
         editingPort = false
-    }
-
-    private func nudgePort(by delta: Int) {
-        let current = Int(portDraft) ?? app.port
-        portDraft = "\(current + delta)"
     }
 
     private var gitBadge: some View {
