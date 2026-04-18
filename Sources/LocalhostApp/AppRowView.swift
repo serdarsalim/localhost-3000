@@ -10,8 +10,9 @@ struct AppRowView: View {
     @FocusState private var portFieldFocused: Bool
     @State private var copied = false
     @State private var showQR = false
-    @State private var showGoAlias = false
+    @State private var editingGoAlias = false
     @State private var goAliasDraft = ""
+    @FocusState private var goAliasFieldFocused: Bool
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
 
     private var takenPorts: Set<Int> {
@@ -22,6 +23,7 @@ struct AppRowView: View {
         HStack(spacing: 14) {
             statusDot
             appName
+            if goLinksEnabled { goLinkBadge }
             portBadge
             gitBadge
             Spacer()
@@ -59,24 +61,54 @@ struct AppRowView: View {
     }
 
     private var appName: some View {
-        Button {
-            guard goLinksEnabled else { return }
-            goAliasDraft = app.goAlias
-            showGoAlias = true
-        } label: {
-            Text(app.name)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
-        }
-        .buttonStyle(.plain)
-        .frame(minWidth: 240, alignment: .leading)
-        .help(goLinksEnabled ? "Click to set go/ alias" : "")
-        .popover(isPresented: $showGoAlias, arrowEdge: .bottom) {
-            GoAliasPopover(alias: $goAliasDraft) {
-                model.updateGoAlias(for: app, alias: goAliasDraft)
-                showGoAlias = false
+        Text(app.name)
+            .fontWeight(.medium)
+            .foregroundStyle(.primary)
+            .frame(minWidth: goLinksEnabled ? 160 : 240, alignment: .leading)
+    }
+
+    private var goLinkBadge: some View {
+        Group {
+            if editingGoAlias {
+                HStack(spacing: 4) {
+                    Text("go/")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    TextField("alias", text: $goAliasDraft)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                        .focused($goAliasFieldFocused)
+                        .onSubmit { saveGoAlias() }
+                        .onAppear { goAliasFieldFocused = true }
+                    Button { saveGoAlias() } label: {
+                        Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.green)
+                    Button { editingGoAlias = false } label: {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("go/\(app.goAlias)")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .onTapGesture {
+                        goAliasDraft = app.goAlias
+                        editingGoAlias = true
+                    }
+                    .help("Click to edit go/ alias")
             }
         }
+        .frame(width: 150, alignment: .leading)
+    }
+
+    private func saveGoAlias() {
+        model.updateGoAlias(for: app, alias: goAliasDraft)
+        editingGoAlias = false
     }
 
     private var portBadge: some View {
@@ -231,15 +263,24 @@ struct AppRowView: View {
     @ViewBuilder
     private var startStopButton: some View {
         if app.isRunning || app.portStatus == .crashed || app.portStatus == .detached {
-            Button("Stop") { model.stop(app: app) }
-                .foregroundStyle(.red)
-                .frame(width: 44)
+            Button { model.stop(app: app) } label: {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 14))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            .help("Stop server")
+            .frame(width: 28)
         } else {
-            Button("Start") { model.start(app: app) }
-                .foregroundStyle(app.portStatus == .external ? Color.secondary : Color.green)
-                .disabled(app.portStatus == .external)
-                .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "")
-                .frame(width: 44)
+            Button { model.start(app: app) } label: {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(app.portStatus == .external ? Color.secondary : Color.green)
+            .disabled(app.portStatus == .external)
+            .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "Start server")
+            .frame(width: 28)
         }
     }
 }
