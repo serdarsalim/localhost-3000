@@ -64,7 +64,7 @@ struct AppRowView: View {
         Text(app.name)
             .fontWeight(.medium)
             .foregroundStyle(.primary)
-            .frame(minWidth: goLinksEnabled ? 160 : 240, alignment: .leading)
+            .frame(minWidth: goLinksEnabled ? 180 : 260, alignment: .leading)
     }
 
     private var goLinkBadge: some View {
@@ -103,7 +103,7 @@ struct AppRowView: View {
                     .help("Click to edit go/ alias")
             }
         }
-        .frame(width: 150, alignment: .leading)
+        .frame(width: 195, alignment: .leading)
     }
 
     private func saveGoAlias() {
@@ -159,7 +159,7 @@ struct AppRowView: View {
                     .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
             }
         }
-        .frame(width: 100, alignment: .leading)
+        .frame(width: 72, alignment: .leading)
     }
 
     private func savePort() {
@@ -196,7 +196,7 @@ struct AppRowView: View {
                 Text("—").foregroundStyle(.tertiary).font(.caption)
             }
         }
-        .frame(width: 110, alignment: .leading)
+        .frame(width: 90, alignment: .leading)
     }
 
     private var activePort: Int { app.detectedPort ?? app.port }

@@ -54,6 +54,7 @@ struct DashboardView: View {
     @Binding var schemeRaw: String
     @State private var showHelp = false
     @State private var showSettings = false
+    @AppStorage("goLinksEnabled") private var goLinksEnabled = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -121,11 +122,38 @@ struct DashboardView: View {
     }
 
     private var appTable: some View {
-        List(model.apps) { app in
-            AppRowView(app: app, model: model)
-                .listRowSeparator(.visible)
+        VStack(spacing: 0) {
+            columnHeaders
+            Divider()
+            List(model.apps) { app in
+                AppRowView(app: app, model: model)
+                    .listRowSeparator(.visible)
+            }
+            .listStyle(.inset)
         }
-        .listStyle(.inset)
+    }
+
+    private var columnHeaders: some View {
+        HStack(spacing: 14) {
+            Color.clear.frame(width: 9)                          // dot
+            Text("App")
+                .frame(minWidth: goLinksEnabled ? 180 : 260, alignment: .leading)
+            if goLinksEnabled {
+                Text("go/ link")
+                    .frame(width: 195, alignment: .leading)
+            }
+            Text("Port")
+                .frame(width: 72, alignment: .leading)
+            Text("Git")
+                .frame(width: 90, alignment: .leading)
+            Spacer()
+        }
+        .font(.caption)
+        .foregroundStyle(.tertiary)
+        .fontWeight(.medium)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 5)
+        .background(.bar)
     }
 }
 
