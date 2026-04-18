@@ -6,7 +6,7 @@ final class ProcessManager {
     private var stopping: Set<String> = []
     var onTerminated: ((String) -> Void)?
 
-    func start(name: String, port: Int, in directory: URL) {
+    func start(name: String, port: Int, in directory: URL, devScript: String? = nil) {
         guard !(running[name]?.isRunning == true) else { return }
 
         var env = ProcessInfo.processInfo.environment
@@ -17,8 +17,17 @@ final class ProcessManager {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        // exec replaces the shell with npm so terminate() hits npm directly
-        process.arguments = ["-c", "exec npm run dev"]
+
+        // If the dev script hardcodes a port, patch it to use our assigned port
+        // so the app's port assignment always wins over the package.json default.
+        let command: String
+        if let script = devScript, script.contains("-p") || script.contains("--port") {
+            let patched = patchPort(in: script, to: port)
+            command = "exec \(patched)"
+        } else {
+            command = "exec npm run dev"
+        }
+        process.arguments = ["-c", command]
         process.currentDirectoryURL = directory
         process.environment = env
         process.standardOutput = FileHandle.nullDevice
@@ -52,5 +61,21 @@ final class ProcessManager {
 
     func isRunning(name: String) -> Bool {
         running[name]?.isRunning == true
+    }
+
+    /// Replaces -p PORT / --port PORT / --port=PORT in a dev script string.
+    private func patchPort(in script: String, to port: Int) -> String {
+        var result = script
+        let patterns = [
+            (#"(-p\s+)\d{4,5}"#,       "$1\(port)"),
+            (#"(--port=)\d{4,5}"#,      "$1\(port)"),
+            (#"(--port\s+)\d{4,5}"#,    "$1\(port)")
+        ]
+        for (pattern, replacement) in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let range = NSRange(result.startIndex..., in: result)
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: replacement)
+        }
+        return result
     }
 }

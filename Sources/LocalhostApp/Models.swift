@@ -18,7 +18,8 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var externalPID: Int32?  // PID of a detached process we can kill
     var goAlias: String      // alias used in go/<alias> routing
     var gitStatus: GitStatus
-    var hasFixedPort: Bool   // true when dev script hardcodes -p / --port
+    var scriptPort: Int?     // port hardcoded in dev script via -p / --port (nil = dynamic)
+    var devScript: String?   // raw dev script string, used to patch port at launch
 }
 
 struct GitStatus: Sendable, Hashable {

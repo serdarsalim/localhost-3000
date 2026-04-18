@@ -10,8 +10,14 @@ struct AppScanner: Sendable {
         scanWithPorts().map(\.name)
     }
 
+    struct ScannedApp: Sendable {
+        let name: String
+        let scriptPort: Int?
+        let devScript: String?
+    }
+
     /// Returns app names and any port hardcoded in their dev script.
-    func scanWithPorts() -> [(name: String, scriptPort: Int?)] {
+    func scanWithPorts() -> [ScannedApp] {
         let fm = FileManager.default
         guard let entries = try? fm.contentsOfDirectory(
             at: portfolioRoot,
@@ -19,7 +25,7 @@ struct AppScanner: Sendable {
             options: [.skipsHiddenFiles]
         ) else { return [] }
 
-        return entries.compactMap { url -> (name: String, scriptPort: Int?)? in
+        return entries.compactMap { url -> ScannedApp? in
             guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { return nil }
             let name = url.lastPathComponent
             guard !excluded.contains(name) else { return nil }
@@ -32,7 +38,7 @@ struct AppScanner: Sendable {
                   let devScript = scripts["dev"] as? String
             else { return nil }
 
-            return (name: name, scriptPort: extractPort(from: devScript))
+            return ScannedApp(name: name, scriptPort: extractPort(from: devScript), devScript: devScript)
         }.sorted { $0.name < $1.name }
     }
 

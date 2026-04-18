@@ -48,6 +48,10 @@ final class AppModel: ObservableObject {
             guard let p = item.scriptPort else { return nil }
             return (item.name, p)
         })
+        let devScripts: [String: String] = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
+            guard let s = item.devScript else { return nil }
+            return (item.name, s)
+        })
         let ports = portStore.assign(to: appNames, scriptPorts: scriptPorts)
         let goAliases = goLinkStore.load()
         let runningNames = Set(appNames.filter { processManager.isRunning(name: $0) })
@@ -114,7 +118,8 @@ final class AppModel: ObservableObject {
                 externalPID: externalPID,
                 goAlias: goAlias,
                 gitStatus: gitStatuses[name] ?? .unknown,
-                hasFixedPort: scriptPorts[name] != nil
+                scriptPort: scriptPorts[name],
+                devScript: devScripts[name]
             )
         }
 
@@ -123,7 +128,7 @@ final class AppModel: ObservableObject {
 
     func start(app: DevApp) {
         guard let root = portfolioRoot else { return }
-        processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name))
+        processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name), devScript: app.devScript)
         update(app.name) { $0.isRunning = true; $0.portStatus = .running }
         refreshProxyRoutes()
     }
