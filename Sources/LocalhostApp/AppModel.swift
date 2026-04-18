@@ -10,6 +10,8 @@ final class AppModel: ObservableObject {
 
     private let processManager = ProcessManager()
     private let portStore = PortStore()
+    private let goLinkStore = GoLinkStore()
+    private let proxyServer = ProxyServer()
     private let defaults = UserDefaults.standard
 
     init() {
@@ -22,6 +24,9 @@ final class AppModel: ObservableObject {
                 app.isRunning = false
                 app.portStatus = .crashed
             }
+        }
+        if defaults.bool(forKey: "goLinksEnabled") {
+            proxyServer.start()
         }
     }
 
@@ -39,9 +44,9 @@ final class AppModel: ObservableObject {
         let scanner = AppScanner(portfolioRoot: root)
         let appNames = scanner.scan()
         let ports = portStore.assign(to: appNames)
+        let goAliases = goLinkStore.load()
         let runningNames = Set(appNames.filter { processManager.isRunning(name: $0) })
 
-        // Run git checks, port checks, and external process scan in parallel
         async let gitTask = withTaskGroup(of: (String, GitStatus).self) { group in
             for name in appNames {
                 let appDir = root.appendingPathComponent(name)
@@ -66,7 +71,6 @@ final class AppModel: ObservableObject {
 
         let (gitStatuses, portListening, detected) = await (gitTask, portTask, detectTask)
 
-        // Build a lookup: project directory path -> DetectedServer
         let detectedByDir: [String: DetectedServer] = Dictionary(
             detected.map { ($0.directory, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -78,33 +82,22 @@ final class AppModel: ObservableObject {
             let weStartedIt = runningNames.contains(name)
             let assignedPortListening = portListening[name] ?? false
             let externalServer = detectedByDir[appDir]
+            let goAlias = goAliases[name] ?? GoLinkStore.defaultAlias(for: name)
 
             let status: PortStatus
             let detectedPort: Int?
             let externalPID: Int32?
 
             if weStartedIt && assignedPortListening {
-                status = .running
-                detectedPort = nil
-                externalPID = nil
+                status = .running; detectedPort = nil; externalPID = nil
             } else if weStartedIt && !assignedPortListening {
-                status = .crashed
-                detectedPort = nil
-                externalPID = nil
+                status = .crashed; detectedPort = nil; externalPID = nil
             } else if let server = externalServer {
-                // A node process is running in this project's directory
-                status = .detached
-                detectedPort = server.port
-                externalPID = server.pid
+                status = .detached; detectedPort = server.port; externalPID = server.pid
             } else if assignedPortListening {
-                // Something else is on the assigned port but not this project
-                status = .external
-                detectedPort = nil
-                externalPID = nil
+                status = .external; detectedPort = nil; externalPID = nil
             } else {
-                status = .free
-                detectedPort = nil
-                externalPID = nil
+                status = .free; detectedPort = nil; externalPID = nil
             }
 
             return DevApp(
@@ -114,15 +107,19 @@ final class AppModel: ObservableObject {
                 portStatus: status,
                 detectedPort: detectedPort,
                 externalPID: externalPID,
+                goAlias: goAlias,
                 gitStatus: gitStatuses[name] ?? .unknown
             )
         }
+
+        refreshProxyRoutes()
     }
 
     func start(app: DevApp) {
         guard let root = portfolioRoot else { return }
         processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name))
         update(app.name) { $0.isRunning = true; $0.portStatus = .running }
+        refreshProxyRoutes()
     }
 
     func stop(app: DevApp) {
@@ -132,6 +129,7 @@ final class AppModel: ObservableObject {
             kill(pid, SIGTERM)
         }
         update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil }
+        refreshProxyRoutes()
     }
 
     func stopAll() {
@@ -143,6 +141,7 @@ final class AppModel: ObservableObject {
             apps[idx].detectedPort = nil
             apps[idx].externalPID = nil
         }
+        refreshProxyRoutes()
     }
 
     func updatePort(for app: DevApp, port: Int) {
@@ -151,6 +150,25 @@ final class AppModel: ObservableObject {
         portStore.save(ports)
         update(app.name) { $0.port = port }
     }
+
+    func updateGoAlias(for app: DevApp, alias: String) {
+        let clean = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+        goLinkStore.setAlias(clean, for: app.name)
+        update(app.name) { $0.goAlias = clean.isEmpty ? GoLinkStore.defaultAlias(for: app.name) : clean }
+        refreshProxyRoutes()
+    }
+
+    func setGoLinksEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: "goLinksEnabled")
+        if enabled {
+            proxyServer.start()
+            refreshProxyRoutes()
+        } else {
+            proxyServer.stop()
+        }
+    }
+
+    var goLinksEnabled: Bool { defaults.bool(forKey: "goLinksEnabled") }
 
     func openTerminal(for app: DevApp) {
         guard let root = portfolioRoot else { return }
@@ -165,6 +183,15 @@ final class AppModel: ObservableObject {
     func openFinder(for app: DevApp) {
         guard let root = portfolioRoot else { return }
         SystemClient.openFinder(at: root.appendingPathComponent(app.name))
+    }
+
+    private func refreshProxyRoutes() {
+        guard defaults.bool(forKey: "goLinksEnabled") else { return }
+        var routes: [String: Int] = [:]
+        for app in apps {
+            routes[app.goAlias] = app.detectedPort ?? app.port
+        }
+        proxyServer.updateRoutes(routes)
     }
 
     private func update(_ name: String, _ mutation: (inout DevApp) -> Void) {

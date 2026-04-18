@@ -9,6 +9,9 @@ struct AppRowView: View {
     @State private var portConflict = false
     @State private var copied = false
     @State private var showQR = false
+    @State private var showGoAlias = false
+    @State private var goAliasDraft = ""
+    @AppStorage("goLinksEnabled") private var goLinksEnabled = false
 
     private var takenPorts: Set<Int> {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
@@ -55,9 +58,24 @@ struct AppRowView: View {
     }
 
     private var appName: some View {
-        Text(app.name)
-            .fontWeight(.medium)
-            .frame(minWidth: 240, alignment: .leading)
+        Button {
+            guard goLinksEnabled else { return }
+            goAliasDraft = app.goAlias
+            showGoAlias = true
+        } label: {
+            Text(app.name)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+        .frame(minWidth: 240, alignment: .leading)
+        .help(goLinksEnabled ? "Click to edit go/ link" : "")
+        .popover(isPresented: $showGoAlias, arrowEdge: .bottom) {
+            GoAliasPopover(alias: $goAliasDraft) {
+                model.updateGoAlias(for: app, alias: goAliasDraft)
+                showGoAlias = false
+            }
+        }
     }
 
     private var portBadge: some View {
@@ -220,6 +238,36 @@ struct AppRowView: View {
                 .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "")
                 .frame(width: 44)
         }
+    }
+}
+
+struct GoAliasPopover: View {
+    @Binding var alias: String
+    let onSave: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("go/ link")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Text("go/")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                TextField("alias", text: $alias)
+                    .frame(width: 160)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .onSubmit { onSave() }
+            }
+            HStack {
+                Spacer()
+                Button("Save", action: onSave)
+                    .keyboardShortcut(.return)
+            }
+        }
+        .padding(14)
+        .frame(width: 260)
     }
 }
 

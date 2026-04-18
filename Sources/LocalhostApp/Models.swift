@@ -16,6 +16,7 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var portStatus: PortStatus
     var detectedPort: Int?   // actual port the server bound to (may differ from assigned)
     var externalPID: Int32?  // PID of a detached process we can kill
+    var goAlias: String      // alias used in go/<alias> routing
     var gitStatus: GitStatus
 }
 
