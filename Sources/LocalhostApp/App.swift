@@ -49,13 +49,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let quickLaunch = UserDefaults.standard.bool(forKey: "menuBarQuickLaunch")
 
         if quickLaunch && !model.apps.isEmpty {
+            let goLinksEnabled = UserDefaults.standard.bool(forKey: "goLinksEnabled")
             for app in model.apps {
-                let indicator = app.isRunning ? "⏹" : "▶"
-                let item = NSMenuItem(
-                    title: "\(indicator)  \(app.name)  :\(app.port)",
-                    action: #selector(toggleApp(_:)),
-                    keyEquivalent: ""
-                )
+                let isActive = app.isRunning || app.portStatus == .detached
+                let indicator = isActive ? "■" : "▶"
+                let indicatorColor: NSColor = isActive ? .systemRed : .systemGreen
+                let suffix = goLinksEnabled ? "  go/\(app.goAlias)" : "  :\(app.detectedPort ?? app.port)"
+
+                let attributed = NSMutableAttributedString()
+                attributed.append(NSAttributedString(
+                    string: indicator,
+                    attributes: [.foregroundColor: indicatorColor]
+                ))
+                attributed.append(NSAttributedString(
+                    string: "  \(app.name)\(suffix)",
+                    attributes: [.foregroundColor: NSColor.labelColor]
+                ))
+
+                let item = NSMenuItem(title: "", action: #selector(toggleApp(_:)), keyEquivalent: "")
+                item.attributedTitle = attributed
                 item.target = self
                 item.representedObject = app.name
                 menu.addItem(item)
