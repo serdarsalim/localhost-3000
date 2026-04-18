@@ -125,11 +125,6 @@ final class AppModel: ObservableObject {
         processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name))
         update(app.name) { $0.isRunning = true; $0.portStatus = .running }
         refreshProxyRoutes()
-        // Refresh after a short delay to detect the actual port in case it differs
-        Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            await refresh()
-        }
     }
 
     func stop(app: DevApp) {
