@@ -69,7 +69,7 @@ struct AppRowView: View {
         }
         .buttonStyle(.plain)
         .frame(minWidth: 240, alignment: .leading)
-        .help(goLinksEnabled ? "Click to edit go/ link" : "")
+        .help(goLinksEnabled ? "Click to set go/ alias" : "")
         .popover(isPresented: $showGoAlias, arrowEdge: .bottom) {
             GoAliasPopover(alias: $goAliasDraft) {
                 model.updateGoAlias(for: app, alias: goAliasDraft)
@@ -251,14 +251,14 @@ struct GoAliasPopover: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 4) {
+                Text("go/")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.secondary)
                 TextField("alias", text: $alias)
-                    .frame(width: 130)
+                    .frame(width: 160)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                     .onSubmit { onSave() }
-                Text(".localhost:9080")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
             }
             HStack {
                 Spacer()
