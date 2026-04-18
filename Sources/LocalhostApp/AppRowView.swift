@@ -7,6 +7,7 @@ struct AppRowView: View {
     @State private var editingPort = false
     @State private var portDraft = ""
     @State private var portConflict = false
+    @FocusState private var portFieldFocused: Bool
     @State private var copied = false
     @State private var showQR = false
     @State private var showGoAlias = false
@@ -98,9 +99,11 @@ struct AppRowView: View {
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(portConflict ? .red : .primary)
+                        .focused($portFieldFocused)
                         .onSubmit { savePort() }
                         .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
                         .onChange(of: portDraft) { _, _ in portConflict = false }
+                        .onAppear { portFieldFocused = true }
                     Button { savePort() } label: {
                         Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     }
