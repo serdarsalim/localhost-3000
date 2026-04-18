@@ -58,9 +58,17 @@ struct SettingsView: View {
 
                     if goLinksEnabled {
                         if goLinksSystemSetup {
-                            Label("System routing active — go/alias works in any browser.", systemImage: "checkmark.circle.fill")
+                            HStack {
+                                Label("System routing active — go/alias works in any browser.", systemImage: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                Spacer()
+                                Button(isSettingUp ? "Reinstalling…" : "Reinstall") {
+                                    Task { await runSetup() }
+                                }
                                 .font(.caption)
-                                .foregroundStyle(.green)
+                                .disabled(isSettingUp)
+                            }
                         } else {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("One-time setup required. Adds a local hostname and installs a port forwarder so go/alias works in any browser. Requires your password once.")
