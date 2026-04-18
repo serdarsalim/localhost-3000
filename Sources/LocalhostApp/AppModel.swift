@@ -48,7 +48,7 @@ final class AppModel: ObservableObject {
             guard let p = item.scriptPort else { return nil }
             return (item.name, p)
         })
-        let devScripts: [String: String] = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
+        let devScripts = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
             guard let s = item.devScript else { return nil }
             return (item.name, s)
         })
@@ -118,7 +118,6 @@ final class AppModel: ObservableObject {
                 externalPID: externalPID,
                 goAlias: goAlias,
                 gitStatus: gitStatuses[name] ?? .unknown,
-                scriptPort: scriptPorts[name],
                 devScript: devScripts[name]
             )
         }

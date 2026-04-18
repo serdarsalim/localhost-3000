@@ -19,13 +19,6 @@ struct AppRowView: View {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
     }
 
-    private var hasFixedPort: Bool { app.scriptPort != nil }
-
-    /// True when another app's dev script hardcodes the same port as this one.
-    private var fixedPortConflict: Bool {
-        guard let mine = app.scriptPort else { return false }
-        return model.apps.contains { $0.name != app.name && $0.scriptPort == mine }
-    }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -134,27 +127,15 @@ struct AppRowView: View {
                     .foregroundStyle(.secondary)
                 }
             } else {
-                HStack(spacing: 4) {
-                    Text(verbatim: "\(app.detectedPort ?? app.port)")
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(
-                            fixedPortConflict ? Color.red :
-                            app.portStatus == .external ? Color.orange : .secondary
-                        )
-                    if hasFixedPort {
-                        Image(systemName: fixedPortConflict ? "lock.trianglebadge.exclamationmark.fill" : "lock.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(fixedPortConflict ? Color.red : Color.secondary.opacity(0.5))
+                Text(verbatim: "\(app.detectedPort ?? app.port)")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
+                    .onTapGesture {
+                        guard !app.isRunning && app.portStatus != .detached else { return }
+                        portDraft = "\(app.port)"
+                        editingPort = true
                     }
-                }
-                .onTapGesture {
-                    guard !hasFixedPort && !app.isRunning && app.portStatus != .detached else { return }
-                    portDraft = "\(app.port)"
-                    editingPort = true
-                }
-                .help(fixedPortConflict ? "Port conflict — another app's dev script also hardcodes port \(app.scriptPort!)" :
-                      hasFixedPort ? "Port is hardcoded in this project's dev script" :
-                      app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
+                    .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
             }
         }
         .frame(width: 90, alignment: .leading)
