@@ -22,13 +22,13 @@ struct AppRowView: View {
     var body: some View {
         HStack(spacing: 14) {
             statusDot
+            startStopButton
             appName
             if goLinksEnabled { goLinkBadge }
             portBadge
             gitBadge
             Spacer()
             actionButtons
-            startStopButton
         }
         .padding(.vertical, 5)
     }
