@@ -59,7 +59,6 @@ struct DashboardView: View {
     var body: some View {
         VStack(spacing: 0) {
             toolbar
-            Divider()
             if model.apps.isEmpty && !model.isLoading {
                 ContentUnavailableView(
                     "No apps found",
@@ -137,10 +136,12 @@ struct DashboardView: View {
                     .frame(width: 70, alignment: .leading)
                 Spacer()
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
             .font(.caption)
             .fontWeight(.medium)
             .foregroundStyle(.tertiary)
-            .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
+            .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden, edges: .top)
             .listRowSeparator(.visible, edges: .bottom)
             .listRowBackground(Color.clear)
