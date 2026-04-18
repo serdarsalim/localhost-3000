@@ -25,6 +25,7 @@ struct SettingsView: View {
                         Text("Launch at startup")
                         Text("Start Localhost automatically when you log in.")
                             .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .onChange(of: launchAtStartup) { _, enabled in
@@ -37,8 +38,9 @@ struct SettingsView: View {
                 Toggle(isOn: $menuBarQuickLaunch) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Menu bar quick launch")
-                        Text("Show your apps in the menu bar icon — start and stop without opening the window.")
+                        Text("Shows all your apps in the menu bar icon dropdown so you can start and stop servers without opening the main window.")
                             .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -48,8 +50,9 @@ struct SettingsView: View {
                     Toggle(isOn: $goLinksEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("go/ links")
-                            Text("Type http://go/alias in your browser to open any app. Click an app name to set its alias.")
+                            Text("Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.")
                                 .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .onChange(of: goLinksEnabled) { _, enabled in
@@ -99,8 +102,8 @@ struct SettingsView: View {
             }
             .padding(.top, 20)
         }
-        .padding(24)
-        .frame(width: 420, height: goLinksEnabled && !goLinksSystemSetup ? 360 : 300)
+        .padding(28)
+        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 420 : 360)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
         }
