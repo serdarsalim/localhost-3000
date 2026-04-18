@@ -38,7 +38,7 @@ struct SettingsView: View {
                 Toggle(isOn: $menuBarQuickLaunch) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Menu bar quick launch")
-                        Text("Shows all your apps in the menu bar icon dropdown so you can start and stop servers without opening the main window.")
+                        Text("Click the menu bar icon and your apps appear right there — start or stop any server without opening the app at all.")
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
