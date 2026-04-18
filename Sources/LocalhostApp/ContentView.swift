@@ -141,6 +141,7 @@ struct DashboardView: View {
             .fontWeight(.medium)
             .foregroundStyle(.tertiary)
             .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
+            .listRowSeparator(.hidden, edges: .top)
             .listRowSeparator(.visible, edges: .bottom)
             .listRowBackground(Color.clear)
             .allowsHitTesting(false)
