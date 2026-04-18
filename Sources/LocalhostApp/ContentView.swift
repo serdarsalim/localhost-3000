@@ -21,7 +21,7 @@ struct ContentView: View {
                 DashboardView(model: model, schemeRaw: $schemeRaw)
             }
         }
-        .frame(minWidth: 860, minHeight: 480)
+        .frame(minWidth: 880, minHeight: 480)
         .preferredColorScheme(preferredScheme)
     }
 }
