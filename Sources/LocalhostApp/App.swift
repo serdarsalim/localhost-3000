@@ -59,7 +59,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let attributed = NSMutableAttributedString()
                 attributed.append(NSAttributedString(
                     string: indicator,
-                    attributes: [.foregroundColor: indicatorColor]
+                    attributes: [
+                        .foregroundColor: indicatorColor,
+                        .strokeColor: NSColor.black.withAlphaComponent(0.35),
+                        .strokeWidth: -1.5
+                    ]
                 ))
                 attributed.append(NSAttributedString(
                     string: "  \(app.name)\(suffix)",
