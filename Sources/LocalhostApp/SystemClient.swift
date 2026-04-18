@@ -102,6 +102,16 @@ enum SystemClient {
         return results
     }
 
+    static func killPort(_ port: Int) {
+        let output = runCommand("/usr/sbin/lsof", ["-ti", "TCP:\(port)"])
+        for pidStr in output.components(separatedBy: .newlines) {
+            let trimmed = pidStr.trimmingCharacters(in: .whitespaces)
+            if let pid = Int32(trimmed), pid > 0 {
+                kill(pid, SIGTERM)
+            }
+        }
+    }
+
     private static func runCommand(_ path: String, _ args: [String], timeout: TimeInterval = 4) -> String {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)

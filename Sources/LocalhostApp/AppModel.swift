@@ -128,6 +128,8 @@ final class AppModel: ObservableObject {
         } else if let pid = app.externalPID {
             kill(pid, SIGTERM)
         }
+        let port = app.detectedPort ?? app.port
+        SystemClient.killPort(port)
         update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil }
         refreshProxyRoutes()
     }
@@ -136,6 +138,8 @@ final class AppModel: ObservableObject {
         processManager.stopAll()
         for idx in apps.indices {
             if let pid = apps[idx].externalPID { kill(pid, SIGTERM) }
+            let port = apps[idx].detectedPort ?? apps[idx].port
+            SystemClient.killPort(port)
             apps[idx].isRunning = false
             apps[idx].portStatus = .free
             apps[idx].detectedPort = nil
