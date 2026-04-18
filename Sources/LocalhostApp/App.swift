@@ -20,16 +20,23 @@ struct LocalhostApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     private var statusItem: NSStatusItem?
-    private var cancellable: AnyCancellable?
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         setupMenuBarIcon()
 
-        cancellable = model.$apps
+        model.$apps
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.rebuildMenu() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.rebuildMenu() }
+            .store(in: &cancellables)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -37,18 +44,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupMenuBarIcon() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Localhost")
-        }
         rebuildMenu()
     }
 
     private func rebuildMenu() {
-        let menu = NSMenu()
         let quickLaunch = UserDefaults.standard.bool(forKey: "menuBarQuickLaunch")
 
-        if quickLaunch && !model.apps.isEmpty {
+        // Remove icon entirely when quick launch is off
+        guard quickLaunch else {
+            statusItem = nil
+            return
+        }
+
+        if statusItem == nil {
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+            statusItem?.button?.image = NSImage(systemSymbolName: "network", accessibilityDescription: "Localhost")
+        }
+
+        let menu = NSMenu()
+
+        if !model.apps.isEmpty {
             let goLinksEnabled = UserDefaults.standard.bool(forKey: "goLinksEnabled")
             for app in model.apps {
                 let isActive = app.isRunning || app.portStatus == .detached
