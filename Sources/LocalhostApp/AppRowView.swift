@@ -247,18 +247,18 @@ struct GoAliasPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("go/ link")
+            Text("Browser shortcut")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 4) {
-                Text("go/")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
                 TextField("alias", text: $alias)
-                    .frame(width: 160)
+                    .frame(width: 130)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
                     .onSubmit { onSave() }
+                Text(".localhost:9080")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
             HStack {
                 Spacer()
@@ -267,7 +267,7 @@ struct GoAliasPopover: View {
             }
         }
         .padding(14)
-        .frame(width: 260)
+        .frame(width: 300)
     }
 }
 

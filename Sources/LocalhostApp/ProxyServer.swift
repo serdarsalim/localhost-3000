@@ -1,8 +1,8 @@
 import Foundation
 import Network
 
-// Runs on port 9080. pf redirects :80 → :9080 so "go/alias" works in the browser.
-// Returns a 302 redirect to localhost:<port> — simple, no content proxying needed.
+// Runs on port 9080. Routes by subdomain: slm.localhost:9080 → localhost:<port>
+// No system setup needed — browsers resolve *.localhost to 127.0.0.1 natively.
 
 final class ProxyServer: @unchecked Sendable {
     static let proxyPort: UInt16 = 9080
@@ -45,31 +45,31 @@ final class ProxyServer: @unchecked Sendable {
         connection.start(queue: .global(qos: .utility))
         connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { data, _, _, _ in
             let requestStr = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-            let firstLine = requestStr.components(separatedBy: "\r\n").first ?? ""
-            let parts = firstLine.split(separator: " ")
+            let lines = requestStr.components(separatedBy: "\r\n")
+            let firstLine = lines.first ?? ""
+
+            // Extract path from "GET /path HTTP/1.1"
+            let reqParts = firstLine.split(separator: " ")
+            let path = reqParts.count >= 2 ? String(reqParts[1]) : "/"
+
+            // Extract subdomain from Host header e.g. "slm.localhost:9080" → "slm"
+            let host = lines.first(where: { $0.lowercased().hasPrefix("host:") })
+                .map { String($0.dropFirst(5)).trimmingCharacters(in: .whitespaces) } ?? ""
+            let hostWithoutPort = host.components(separatedBy: ":").first ?? host
+            let subdomain = hostWithoutPort.components(separatedBy: ".").first ?? ""
 
             let response: String
-            if parts.count >= 2 {
-                let fullPath = String(parts[1])
-                let segments = fullPath.split(separator: "/", omittingEmptySubsequences: true)
-                let alias = segments.first.map(String.init) ?? ""
-                let tail = segments.dropFirst().joined(separator: "/")
-                let targetPath = tail.isEmpty ? "/" : "/\(tail)"
-
-                if let port = routes[alias] {
-                    response = "HTTP/1.1 302 Found\r\nLocation: http://localhost:\(port)\(targetPath)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                } else if alias.isEmpty {
-                    let list = routes.sorted { $0.key < $1.key }
-                        .map { "  go/\($0.key)  →  localhost:\($0.value)" }
-                        .joined(separator: "\n")
-                    let body = "Localhost 3000 — go/ links\n\n\(list.isEmpty ? "(none configured)" : list)"
-                    response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
-                } else {
-                    let body = "go/\(alias) is not configured in Localhost 3000."
-                    response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
-                }
+            if let port = routes[subdomain] {
+                response = "HTTP/1.1 302 Found\r\nLocation: http://localhost:\(port)\(path)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            } else if subdomain == "localhost" || subdomain.isEmpty {
+                let list = routes.sorted { $0.key < $1.key }
+                    .map { "  \($0.key).localhost:9080  →  localhost:\($0.value)" }
+                    .joined(separator: "\n")
+                let body = "Localhost 3000 — go links\n\n\(list.isEmpty ? "(none configured)" : list)"
+                response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             } else {
-                response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                let body = "\(subdomain).localhost:9080 is not configured in Localhost 3000."
+                response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             }
 
             connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in
