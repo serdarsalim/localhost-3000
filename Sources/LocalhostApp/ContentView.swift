@@ -124,7 +124,6 @@ struct DashboardView: View {
     private var appTable: some View {
         List {
             HStack(spacing: 14) {
-                Color.clear.frame(width: 9)   // dot
                 Color.clear.frame(width: 28)  // play/stop button
                 Text("App")
                     .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
@@ -133,7 +132,7 @@ struct DashboardView: View {
                         .frame(width: 210, alignment: .leading)
                 }
                 Text("Port")
-                    .frame(width: 72, alignment: .leading)
+                    .frame(width: 90, alignment: .leading)
                 Text("Git")
                     .frame(width: 70, alignment: .leading)
                 Spacer()

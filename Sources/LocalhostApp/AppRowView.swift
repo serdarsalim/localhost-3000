@@ -21,43 +21,15 @@ struct AppRowView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            statusDot
             startStopButton
             appName
             if goLinksEnabled { goLinkBadge }
             portBadge
             gitBadge
-            Spacer()
+            Spacer(minLength: 24)
             actionButtons
         }
         .padding(.vertical, 5)
-    }
-
-    private var statusDot: some View {
-        Circle()
-            .fill(dotColor)
-            .frame(width: 9, height: 9)
-            .help(dotTooltip)
-    }
-
-    private var dotColor: Color {
-        switch app.portStatus {
-        case .running:  .green
-        case .detached: .green
-        case .crashed:  .red
-        case .external: .orange
-        case .free:     Color.secondary.opacity(0.25)
-        }
-    }
-
-    private var dotTooltip: String {
-        switch app.portStatus {
-        case .running:  "Running on :\(app.port)"
-        case .detached: "Running on :\(app.detectedPort ?? app.port) (started outside this app)"
-        case .crashed:  "Crashed — was running on :\(app.port) but stopped responding"
-        case .external: "Port \(app.port) is in use by an unrelated process"
-        case .free:     "Stopped"
-        }
     }
 
     private var appName: some View {
@@ -156,7 +128,7 @@ struct AppRowView: View {
             } else {
                 Text(verbatim: "\(app.detectedPort ?? app.port)")
                     .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
                     .onTapGesture {
                         guard !app.isRunning && app.portStatus != .detached else { return }
                         portDraft = "\(app.port)"
@@ -165,7 +137,7 @@ struct AppRowView: View {
                     .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
             }
         }
-        .frame(width: 72, alignment: .leading)
+        .frame(width: 90, alignment: .leading)
     }
 
     private func savePort() {
