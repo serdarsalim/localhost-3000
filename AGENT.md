@@ -2,32 +2,37 @@
 
 ## What this is
 
-A native macOS app (Swift 6, SwiftUI, macOS 14+) that scans a portfolio folder for npm projects and lets you start/stop their dev servers, see git status, edit ports, and open each project in the browser, terminal, VS Code, or Finder.
+A native macOS app (Swift 6, SwiftUI, macOS 14+) that scans a portfolio folder for npm projects and lets you start/stop their dev servers, see git status, edit ports and go/ aliases, and open each project in the browser, terminal, VS Code, or Finder.
 
 No Xcode. Built entirely with Swift Package Manager.
 
-## Rules for agents
+---
 
-After every code change — bug fix, feature, tweak, anything — always:
-1. Run `./build-app.sh` to rebuild the app
-2. Kill the running instance and relaunch: `pkill -f "Localhost 3000"; sleep 0.5; open "dist/Localhost 3000.app"`
-3. Commit and push the change to GitHub
+## Rules — do this after every code change
+
+1. `./build-app.sh` — rebuild the app bundle
+2. Kill and relaunch: `pkill -x "LocalhostApp" 2>/dev/null; sleep 1; open "dist/Localhost 3000.app"`
+3. Commit and push to GitHub
 4. Upload the zip to the GitHub release: `gh release upload v0.1.0 dist/localhost-3000-macos.zip --clobber --repo serdarsalim/localhost-3000`
 
-Do not ask the user if they want this done. Just do it every time.
+Do not ask. Just do it every time, in that order.
+
+One-liner to do steps 1–2 together:
+```bash
+bash build-app.sh 2>&1 | tail -4 && gh release upload v0.1.0 dist/localhost-3000-macos.zip --clobber -R serdarsalim/localhost-3000 && pkill -x "LocalhostApp" 2>/dev/null; sleep 1 && open "dist/Localhost 3000.app"
+```
+
+---
 
 ## Build & run
 
 ```bash
-swift build -c release      # compile
-./build-app.sh              # bundle + sign → dist/Localhost 3000.app
+swift build -c release      # compile only
+./build-app.sh              # compile + bundle + sign → dist/Localhost 3000.app
 open "dist/Localhost 3000.app"
 ```
 
-To rebuild and relaunch in one shot:
-```bash
-./build-app.sh && pkill -f "Localhost 3000"; sleep 0.5; open "dist/Localhost 3000.app"
-```
+---
 
 ## Project structure
 
@@ -35,60 +40,115 @@ To rebuild and relaunch in one shot:
 Package.swift                        SPM config, Swift 6, macOS 14+
 build-app.sh                         builds .app bundle, generates icon, ad-hoc signs, zips
 AppIcon.png                          source icon (1024×1024), converted to .icns by build script
-make-icon.swift                      generates AppIcon.png from SF Symbol globe
+make-icon.swift                      generates AppIcon.png from SF Symbol
 
 Sources/LocalhostApp/
-  App.swift                          @main entry + AppDelegate
-  Models.swift                       DevApp, GitStatus (Sendable structs)
+  App.swift                          @main entry + AppDelegate (menu bar icon, Combine observers)
+  Models.swift                       DevApp, GitStatus, PortStatus (Sendable structs)
   PortStore.swift                    load/save ports in UserDefaults (key: "appPorts")
+  GoLinkStore.swift                  load/save go/ aliases in UserDefaults (key: "goLinks")
   AppScanner.swift                   scans portfolio root for dirs with package.json + "dev" script
   ProcessManager.swift               @MainActor, starts/stops npm via /bin/zsh exec npm run dev
   GitClient.swift                    async git status checks via Task.detached shell calls
-  SystemClient.swift                 open Terminal / VS Code / Finder / browser, copy LAN URL
+  SystemClient.swift                 open Terminal / VS Code / Finder / browser, copy LAN URL,
+                                     detect external running servers via lsof
+  ProxyServer.swift                  NWListener on port 9080, routes go/alias → localhost:PORT
   AppModel.swift                     @MainActor ObservableObject — all app logic
-  ContentView.swift                  welcome screen + dashboard layout + footer
-  AppRowView.swift                   per-app row: status dot, name, port editor, git badge, actions
-  HelpView.swift                     in-app help sheet (opened from footer Help button)
+  ContentView.swift                  welcome screen + dashboard layout + column headers + footer
+  AppRowView.swift                   per-app row: play/stop, name, go/alias, port, git, actions
+  SettingsView.swift                 Settings sheet + GoLinksSetup (install/uninstall LaunchDaemon)
+  HelpView.swift                     in-app help sheet
   ScrollWheelModifier.swift          NSViewRepresentable scroll wheel capture for port nudging
-  NativeTextField.swift              NSViewRepresentable text field (currently unused — kept for reference)
 ```
+
+---
 
 ## Key decisions & gotchas
 
-**Port persistence** — `PortStore` uses `UserDefaults`. Critical: `defaults.dictionary(forKey:)` returns `[String: Any]`, which cannot be cast directly to `[String: Int]`. Always use `compactMapValues { $0 as? Int }` to extract values. This was a root-cause bug — don't revert it.
+### Port persistence
+`PortStore` uses `UserDefaults`. `defaults.dictionary(forKey:)` returns `[String: Any]` — cannot cast directly to `[String: Int]`. Always use `compactMapValues { $0 as? Int }`. This was a root-cause bug — don't revert it.
 
-**Process spawning** — uses `/bin/zsh -c "exec npm run dev"` with PATH set to include `/opt/homebrew/bin:/usr/local/bin`. The `exec` replaces the shell so `process.terminate()` hits npm directly.
+### Process spawning
+Uses `/bin/zsh -c "exec npm run dev"` with PATH set to include `/opt/homebrew/bin:/usr/local/bin`. The `exec` replaces the shell so `process.terminate()` hits npm directly. Sets both `PORT` and `VITE_PORT` env vars.
 
-**Port environment** — sets both `PORT` and `VITE_PORT` env vars. Next.js reads `PORT`, Vite projects may need `--port` in their dev script instead.
+### External server detection
+`SystemClient.detectRunningServers()` runs two `lsof` calls: one for (pid→port) of listening node processes, one for (pid→cwd), matched by PID. Uses `DispatchSemaphore` with a 4-second timeout to prevent hangs. Detected external servers show as `.detached` status — Stop button sends `SIGTERM` to their PID.
 
-**Terminal button** — uses `open -a Terminal <path>`, NOT AppleScript. AppleScript requires special entitlements the ad-hoc signed app doesn't have.
+### PortStatus enum
+`.free` — stopped, port available
+`.running` — started by this app, port listening
+`.detached` — started externally, detected by lsof
+`.external` — port in use by an unrelated process
+`.crashed` — was started by app but stopped unexpectedly
 
-**Dark/light mode** — stored in `@AppStorage("colorScheme")` as `"light"` or `"dark"`. Toggle in footer cycles between the two.
+Port number turns **orange** in the UI when status is `.external`.
 
-**Port editing UX** — clicking port number opens inline editor with ↑↓ arrows (left), text field, scroll wheel nudge, ✓ save, ✗ cancel. Enter also saves. `savePort()` calls `model.updatePort(for:port:)` directly.
+### go/ links architecture
+Three-layer stack:
+1. `/etc/hosts` — adds `127.0.0.1 go` (one-time setup)
+2. Python TCP forwarder as LaunchDaemon — listens on port 80, forwards to port 9080 (one-time setup, runs as root at boot)
+3. `ProxyServer` (NWListener on 9080) — reads `/alias` from HTTP path, returns 302 to `http://localhost:PORT`
 
-**Signing** — ad-hoc only (`codesign --sign -`). No Apple Developer account needed. Users get a Gatekeeper warning on first launch; right-click → Open bypasses it.
+Setup is done via `osascript` with `with administrator privileges` — runs a shell script that writes the plist to `/Library/LaunchDaemons/` and loads it with `launchctl`. One-time only. Tracked via `@AppStorage("goLinksSystemSetup")`.
 
-**No Xcode project** — never add one. SPM only.
+`GoLinkStore` saves `[appName: alias]` to UserDefaults key `"goLinks"`. Default alias is `appName.lowercased()`.
 
-**No third-party dependencies** — keep it that way.
+`ProxyServer` is path-based (not host-header-based). It reads the first path segment from the HTTP request line as the alias. Do not revert to host-header routing — it doesn't work because the browser sends `Host: 127.0.0.1:9080`, not `Host: alias.go`.
+
+### Menu bar icon
+`AppDelegate` holds `NSStatusItem?`. `rebuildMenu()` creates/destroys the status item based on `UserDefaults["menuBarQuickLaunch"]`. Two Combine subscribers trigger `rebuildMenu()`: one on `model.$apps`, one on `NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)`. The second one ensures toggling the setting in the UI immediately shows/hides the icon.
+
+### Row layout (AppRowView)
+Order: play/stop button → app name → go/ alias (if enabled) → port → git → Spacer → action buttons
+
+Column widths (must stay in sync between AppRowView and the header row in ContentView):
+- play/stop: 28px (header placeholder: `Color.clear.frame(width: 28)`)
+- app name: minWidth 200 (go links on) / 280 (go links off)
+- go/ alias: 210px
+- port: 90px
+- git: 70px
+
+### Port/alias field focus
+When editing a port or go/ alias inline, `onChange(of: fieldFocused)` reasserts focus if it drops. This prevents clicking outside from dismissing the editor — only ✓, ✕, or Enter can exit.
+
+### Terminal button
+Uses `open -a Terminal <path>`, not AppleScript. AppleScript requires entitlements the ad-hoc signed app doesn't have.
+
+### Dark/light mode
+Stored in `@AppStorage("colorScheme")` as `"light"` or `"dark"`. Toggle in footer cycles between the two.
+
+### Signing
+Ad-hoc only (`codesign --sign -`). No Apple Developer account needed. Users get a Gatekeeper warning on first launch; right-click → Open bypasses it.
+
+### No Xcode project
+Never add one. SPM only. No third-party dependencies.
+
+---
 
 ## State flow
 
 ```
 AppModel (@MainActor ObservableObject)
-  ├── refresh() — scans folder, assigns ports, fetches git status in parallel
-  ├── start(app:) — ProcessManager.start → updates apps[].isRunning
-  ├── stop(app:) — ProcessManager.stop → updates apps[].isRunning
-  └── updatePort(for:port:) — PortStore.save + updates apps[].port in memory
+  ├── refresh() — scans folder, assigns ports, fetches git + port + external servers in parallel
+  ├── start(app:) — ProcessManager.start → updates apps[].isRunning + refreshProxyRoutes()
+  ├── stop(app:) — ProcessManager.stop or kill(pid, SIGTERM) → updates apps[] + refreshProxyRoutes()
+  ├── stopAll() — stops all, updates all apps[]
+  ├── updatePort(for:port:) — PortStore.save + updates apps[].port in memory
+  ├── updateGoAlias(for:alias:) — GoLinkStore.setAlias + updates apps[].goAlias + refreshProxyRoutes()
+  ├── setGoLinksEnabled(_:) — starts/stops ProxyServer + refreshProxyRoutes()
+  └── refreshProxyRoutes() — builds [alias: port] dict → ProxyServer.updateRoutes()
 
-PortStore — UserDefaults key "appPorts" ([String: Int])
-ProcessManager — @MainActor, tracks [String: Process]
+PortStore — UserDefaults "appPorts" ([String: Int])
+GoLinkStore — UserDefaults "goLinks" ([String: String])
+ProcessManager — @MainActor, tracks [String: Process], crash detection via terminationHandler
+ProxyServer — @unchecked Sendable, NWListener on 9080, NSLock for thread-safe routes
 GitClient — static async, runs git via Task.detached
-SystemClient — static, AppKit calls (open, NSWorkspace, NSPasteboard)
+SystemClient — static, AppKit calls + lsof-based server detection
 ```
+
+---
 
 ## GitHub
 
 Repo: https://github.com/serdarsalim/localhost-3000
-Push after changes: `git add -A && git commit -m "..." && git push`
+Release: v0.1.0 — asset `localhost-3000-macos.zip`
