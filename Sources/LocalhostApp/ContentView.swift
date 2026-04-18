@@ -122,38 +122,35 @@ struct DashboardView: View {
     }
 
     private var appTable: some View {
-        VStack(spacing: 0) {
-            columnHeaders
-            Divider()
-            List(model.apps) { app in
+        List {
+            HStack(spacing: 14) {
+                Color.clear.frame(width: 9)
+                Text("App")
+                    .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
+                if goLinksEnabled {
+                    Text("go/ link")
+                        .frame(width: 210, alignment: .leading)
+                }
+                Text("Port")
+                    .frame(width: 72, alignment: .leading)
+                Text("Git")
+                    .frame(width: 70, alignment: .leading)
+                Spacer()
+            }
+            .font(.caption)
+            .fontWeight(.medium)
+            .foregroundStyle(.tertiary)
+            .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
+            .listRowSeparator(.visible, edges: .bottom)
+            .listRowBackground(Color.clear)
+            .allowsHitTesting(false)
+
+            ForEach(model.apps) { app in
                 AppRowView(app: app, model: model)
                     .listRowSeparator(.visible)
             }
-            .listStyle(.inset)
         }
-    }
-
-    private var columnHeaders: some View {
-        HStack(spacing: 14) {
-            Color.clear.frame(width: 9)                          // dot
-            Text("App")
-                .frame(minWidth: goLinksEnabled ? 180 : 260, alignment: .leading)
-            if goLinksEnabled {
-                Text("go/ link")
-                    .frame(width: 195, alignment: .leading)
-            }
-            Text("Port")
-                .frame(width: 72, alignment: .leading)
-            Text("Git")
-                .frame(width: 90, alignment: .leading)
-            Spacer()
-        }
-        .font(.caption)
-        .foregroundStyle(.tertiary)
-        .fontWeight(.medium)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 5)
-        .background(.bar)
+        .listStyle(.inset)
     }
 }
 

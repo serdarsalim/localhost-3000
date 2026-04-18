@@ -64,7 +64,7 @@ struct AppRowView: View {
         Text(app.name)
             .fontWeight(.medium)
             .foregroundStyle(.primary)
-            .frame(minWidth: goLinksEnabled ? 180 : 260, alignment: .leading)
+            .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
     }
 
     private var goLinkBadge: some View {
@@ -103,7 +103,7 @@ struct AppRowView: View {
                     .help("Click to edit go/ alias")
             }
         }
-        .frame(width: 195, alignment: .leading)
+        .frame(width: 210, alignment: .leading)
     }
 
     private func saveGoAlias() {
@@ -182,10 +182,11 @@ struct AppRowView: View {
         Group {
             if app.gitStatus.isRepo {
                 if app.gitStatus.uncommittedCount > 0 {
-                    Label("\(app.gitStatus.uncommittedCount) uncommitted", systemImage: "exclamationmark.circle.fill")
+                    Label("\(app.gitStatus.uncommittedCount)", systemImage: "exclamationmark.circle.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.caption)
                         .foregroundStyle(.orange)
+                        .help("\(app.gitStatus.uncommittedCount) uncommitted changes")
                 } else {
                     Label("Clean", systemImage: "checkmark.circle.fill")
                         .labelStyle(.titleAndIcon)
@@ -196,7 +197,7 @@ struct AppRowView: View {
                 Text("—").foregroundStyle(.tertiary).font(.caption)
             }
         }
-        .frame(width: 90, alignment: .leading)
+        .frame(width: 70, alignment: .leading)
     }
 
     private var activePort: Int { app.detectedPort ?? app.port }
