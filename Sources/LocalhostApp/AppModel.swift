@@ -42,8 +42,13 @@ final class AppModel: ObservableObject {
         defer { isLoading = false }
 
         let scanner = AppScanner(portfolioRoot: root)
-        let appNames = scanner.scan()
-        let ports = portStore.assign(to: appNames)
+        let scanned = scanner.scanWithPorts()
+        let appNames = scanned.map(\.name)
+        let scriptPorts = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, Int)? in
+            guard let p = item.scriptPort else { return nil }
+            return (item.name, p)
+        })
+        let ports = portStore.assign(to: appNames, scriptPorts: scriptPorts)
         let goAliases = goLinkStore.load()
         let runningNames = Set(appNames.filter { processManager.isRunning(name: $0) })
 
@@ -120,6 +125,11 @@ final class AppModel: ObservableObject {
         processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name))
         update(app.name) { $0.isRunning = true; $0.portStatus = .running }
         refreshProxyRoutes()
+        // Refresh after a short delay to detect the actual port in case it differs
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            await refresh()
+        }
     }
 
     func stop(app: DevApp) {

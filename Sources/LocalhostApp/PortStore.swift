@@ -13,12 +13,22 @@ struct PortStore {
         defaults.set(ports, forKey: key)
     }
 
-    func assign(to appNames: [String]) -> [String: Int] {
+    /// Assigns ports to app names. For new apps, prefers the port hardcoded in
+    /// their dev script (scriptPorts) over auto-incrementing from 3001.
+    func assign(to appNames: [String], scriptPorts: [String: Int] = [:]) -> [String: Int] {
         var ports = load()
         var used = Set(ports.values)
         var next = 3001
+
         for name in appNames {
-            if ports[name] == nil {
+            guard ports[name] == nil else { continue }
+
+            if let hint = scriptPorts[name], !used.contains(hint) {
+                // Respect the port hardcoded in the project's dev script
+                ports[name] = hint
+                used.insert(hint)
+            } else {
+                // Auto-assign next free port
                 while used.contains(next) { next += 1 }
                 ports[name] = next
                 used.insert(next)
