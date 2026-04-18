@@ -126,15 +126,23 @@ struct AppRowView: View {
                     .foregroundStyle(.secondary)
                 }
             } else {
-                Text(verbatim: "\(app.detectedPort ?? app.port)")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
-                    .onTapGesture {
-                        guard !app.isRunning && app.portStatus != .detached else { return }
-                        portDraft = "\(app.port)"
-                        editingPort = true
+                HStack(spacing: 4) {
+                    Text(verbatim: "\(app.detectedPort ?? app.port)")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
+                    if app.hasFixedPort {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
                     }
-                    .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
+                }
+                .onTapGesture {
+                    guard !app.hasFixedPort && !app.isRunning && app.portStatus != .detached else { return }
+                    portDraft = "\(app.port)"
+                    editingPort = true
+                }
+                .help(app.hasFixedPort ? "Port is hardcoded in this project's dev script" :
+                      app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
             }
         }
         .frame(width: 90, alignment: .leading)

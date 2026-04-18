@@ -113,7 +113,8 @@ final class AppModel: ObservableObject {
                 detectedPort: detectedPort,
                 externalPID: externalPID,
                 goAlias: goAlias,
-                gitStatus: gitStatuses[name] ?? .unknown
+                gitStatus: gitStatuses[name] ?? .unknown,
+                hasFixedPort: scriptPorts[name] != nil
             )
         }
 
