@@ -12,7 +12,10 @@ final class ProcessManager {
         var env = ProcessInfo.processInfo.environment
         env["PORT"] = "\(port)"
         env["VITE_PORT"] = "\(port)"
-        let extraPaths = "/opt/homebrew/bin:/usr/local/bin"
+        // Include local node_modules/.bin so patched scripts can find binaries
+        // (npm adds this automatically; direct script execution needs it explicitly)
+        let localBin = directory.appendingPathComponent("node_modules/.bin").path
+        let extraPaths = "\(localBin):/opt/homebrew/bin:/usr/local/bin"
         env["PATH"] = "\(extraPaths):\(env["PATH"] ?? "/usr/bin:/bin")"
 
         let process = Process()
