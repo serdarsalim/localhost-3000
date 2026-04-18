@@ -81,6 +81,9 @@ struct AppRowView: View {
                         .focused($goAliasFieldFocused)
                         .onSubmit { saveGoAlias() }
                         .onAppear { goAliasFieldFocused = true }
+                        .onChange(of: goAliasFieldFocused) { _, focused in
+                            if !focused { goAliasFieldFocused = true }
+                        }
                     Button { saveGoAlias() } label: {
                         Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     }
@@ -136,6 +139,9 @@ struct AppRowView: View {
                         .scrollWheelHandler { delta in nudgePort(by: delta > 0 ? 1 : -1) }
                         .onChange(of: portDraft) { _, _ in portConflict = false }
                         .onAppear { portFieldFocused = true }
+                        .onChange(of: portFieldFocused) { _, focused in
+                            if !focused { portFieldFocused = true }
+                        }
                     Button { savePort() } label: {
                         Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
                     }
