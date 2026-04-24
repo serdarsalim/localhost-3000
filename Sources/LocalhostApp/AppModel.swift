@@ -7,6 +7,13 @@ final class AppModel: ObservableObject {
     @Published var apps: [DevApp] = []
     @Published var portfolioRoot: URL?
     @Published var isLoading = false
+    @Published var pendingFailure: StartFailure?
+
+    struct StartFailure: Identifiable {
+        let id = UUID()
+        let appName: String
+        let holders: [PortHolder]
+    }
 
     private let processManager = ProcessManager()
     private let portStore = PortStore()
@@ -24,6 +31,10 @@ final class AppModel: ObservableObject {
                 app.isRunning = false
                 app.portStatus = .crashed
             }
+        }
+        processManager.onStartFailure = { [weak self] name, holders in
+            guard let self, !holders.isEmpty else { return }
+            self.pendingFailure = StartFailure(appName: name, holders: holders)
         }
         if defaults.bool(forKey: "goLinksEnabled") {
             proxyServer.start()
@@ -186,6 +197,25 @@ final class AppModel: ObservableObject {
 
     func logBuffer(for app: DevApp) -> LogBuffer {
         processManager.logBuffer(for: app.name)
+    }
+
+    /// Kill every listed port holder then restart the app.
+    func killAndRetry(_ failure: StartFailure) {
+        for holder in failure.holders {
+            SystemClient.killPID(holder.pid)
+        }
+        pendingFailure = nil
+        // Brief delay so the OS actually reaps the killed processes before we
+        // try binding the port again.
+        let appName = failure.appName
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, let app = self.apps.first(where: { $0.name == appName }) else { return }
+            self.start(app: app)
+        }
+    }
+
+    func dismissFailure() {
+        pendingFailure = nil
     }
 
     func openTerminal(for app: DevApp) {

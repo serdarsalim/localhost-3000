@@ -74,6 +74,21 @@ struct DashboardView: View {
         .task { await model.refresh() }
         .sheet(isPresented: $showHelp) { HelpView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .alert(item: Binding(
+            get: { model.pendingFailure },
+            set: { if $0 == nil { model.dismissFailure() } }
+        )) { failure in
+            Alert(
+                title: Text("\(failure.appName) failed to start"),
+                message: Text(alertMessage(for: failure)),
+                primaryButton: .destructive(Text("Kill & retry")) {
+                    model.killAndRetry(failure)
+                },
+                secondaryButton: .cancel(Text("Cancel")) {
+                    model.dismissFailure()
+                }
+            )
+        }
     }
 
     private var toolbar: some View {
@@ -109,6 +124,13 @@ struct DashboardView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    private func alertMessage(for failure: AppModel.StartFailure) -> String {
+        let lines = failure.holders.map { holder in
+            "Port \(holder.port) — \(holder.command) (pid \(holder.pid))"
+        }
+        return "These processes are holding the ports it needs:\n\n\(lines.joined(separator: "\n"))"
     }
 
     private func footerIcon(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {

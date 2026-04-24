@@ -7,14 +7,9 @@ import Combine
 final class LogBuffer: ObservableObject {
     private(set) var lines: [String] = []
     @Published private(set) var revision: Int = 0
-    /// Assigned port for this app — used by the log viewer to surface
-    /// "kill what's on this port" affordances when the process dies fast.
-    @Published var assignedPort: Int = 0
-    /// True when the last run exited within a few seconds of starting —
-    /// almost always a port-conflict or stuck-sidecar situation.
-    @Published var quickExit: Bool = false
+    /// Assigned port for this app — used when we need to inspect conflicts on failure.
+    var assignedPort: Int = 0
     private let capacity: Int
-    private var startedAt: Date?
 
     init(capacity: Int = 3000) {
         self.capacity = capacity
@@ -22,15 +17,6 @@ final class LogBuffer: ObservableObject {
 
     func markStarted(port: Int) {
         assignedPort = port
-        startedAt = Date()
-        quickExit = false
-    }
-
-    func markEnded() {
-        if let started = startedAt, Date().timeIntervalSince(started) < 5.0 {
-            quickExit = true
-        }
-        startedAt = nil
     }
 
     func append(_ chunk: String) {
@@ -71,12 +57,23 @@ final class LogBuffer: ObservableObject {
     var joined: String { lines.joined(separator: "\n") }
 }
 
+struct PortHolder: Identifiable, Hashable {
+    let port: Int
+    let pid: Int32
+    let command: String
+    var id: String { "\(port)-\(pid)" }
+}
+
 @MainActor
 final class ProcessManager {
     private var running: [String: Process] = [:]
     private var stopping: Set<String> = []
     private var buffers: [String: LogBuffer] = [:]
     var onTerminated: ((String) -> Void)?
+    /// Called when a running process exits with a non-zero status and the stop
+    /// wasn't user-initiated. Receives every port holder found on the assigned
+    /// port plus any port number mentioned in the tail of the log.
+    var onStartFailure: ((String, [PortHolder]) -> Void)?
 
     func logBuffer(for name: String) -> LogBuffer {
         if let existing = buffers[name] { return existing }
@@ -128,15 +125,22 @@ final class ProcessManager {
         attachReader(errPipe.fileHandleForReading, to: buffer)
 
         process.terminationHandler = { [weak self, name] proc in
+            let exitStatus = proc.terminationStatus
+            let reasonKind = proc.terminationReason
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let unexpected = !self.stopping.contains(name)
                 self.stopping.remove(name)
                 self.running.removeValue(forKey: name)
-                let reason = proc.terminationReason == .uncaughtSignal ? "signal" : "exit"
-                self.buffers[name]?.append("$ process ended (\(reason) \(proc.terminationStatus))")
-                self.buffers[name]?.markEnded()
-                if unexpected { self.onTerminated?(name) }
+                let reason = reasonKind == .uncaughtSignal ? "signal" : "exit"
+                self.buffers[name]?.append("$ process ended (\(reason) \(exitStatus))")
+                if unexpected {
+                    self.onTerminated?(name)
+                    if exitStatus != 0, let onFail = self.onStartFailure {
+                        let holders = self.detectConflictHolders(for: name)
+                        onFail(name, holders)
+                    }
+                }
             }
         }
 
@@ -230,6 +234,20 @@ final class ProcessManager {
                 buffer?.append(chunk)
             }
         }
+    }
+
+    private func detectConflictHolders(for name: String) -> [PortHolder] {
+        guard let buffer = buffers[name] else { return [] }
+        var ports = Set<Int>()
+        if buffer.assignedPort > 0 { ports.insert(buffer.assignedPort) }
+        for p in buffer.mentionedPorts { ports.insert(p) }
+        var holders: [PortHolder] = []
+        for port in ports.sorted() {
+            for (pid, cmd) in SystemClient.processesOnPort(port) {
+                holders.append(PortHolder(port: port, pid: pid, command: cmd))
+            }
+        }
+        return holders
     }
 
     /// Replaces -p PORT / --port PORT / --port=PORT in a dev script string.

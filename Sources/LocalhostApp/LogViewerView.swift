@@ -62,14 +62,6 @@ struct LogViewerView: View {
     @ObservedObject var buffer: LogBuffer
     let appName: String
     @State private var copied = false
-    @State private var conflictHolders: [PortHolder] = []
-
-    struct PortHolder: Identifiable {
-        let id = UUID()
-        let port: Int
-        let pid: Int32
-        let command: String
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,11 +88,6 @@ struct LogViewerView: View {
             }
             .padding(10)
             Divider()
-
-            if buffer.quickExit && !conflictHolders.isEmpty {
-                conflictBanner
-                Divider()
-            }
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -135,68 +122,5 @@ struct LogViewerView: View {
             }
         }
         .frame(width: 640, height: 460)
-        .onChange(of: buffer.quickExit) { _, quick in
-            if quick { refreshConflictHolders() }
-            else { conflictHolders = [] }
-        }
-        .onAppear {
-            if buffer.quickExit { refreshConflictHolders() }
-        }
-    }
-
-    private var conflictBanner: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Text("Startup failed quickly — likely a port conflict")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-                Button("Recheck") { refreshConflictHolders() }
-                    .font(.caption)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(conflictHolders) { holder in
-                HStack(spacing: 10) {
-                    Text(":\(holder.port)")
-                        .font(.system(.caption, design: .monospaced))
-                        .fontWeight(.semibold)
-                        .frame(width: 60, alignment: .leading)
-                        .foregroundStyle(.orange)
-                    Text(holder.command)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer(minLength: 8)
-                    Button("Kill \(holder.pid)") {
-                        SystemClient.killPID(holder.pid)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            refreshConflictHolders()
-                        }
-                    }
-                    .font(.caption)
-                    .controlSize(.small)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.orange.opacity(0.08))
-    }
-
-    private func refreshConflictHolders() {
-        var ports = Set<Int>()
-        if buffer.assignedPort > 0 { ports.insert(buffer.assignedPort) }
-        for p in buffer.mentionedPorts { ports.insert(p) }
-        var found: [PortHolder] = []
-        for port in ports.sorted() {
-            for (pid, cmd) in SystemClient.processesOnPort(port) {
-                found.append(PortHolder(port: port, pid: pid, command: cmd))
-            }
-        }
-        conflictHolders = found
     }
 }
