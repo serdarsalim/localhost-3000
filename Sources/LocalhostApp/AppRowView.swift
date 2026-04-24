@@ -10,10 +10,18 @@ struct AppRowView: View {
     @FocusState private var portFieldFocused: Bool
     @State private var copied = false
     @State private var showQR = false
+    @State private var showLogs = false
     @State private var editingGoAlias = false
     @State private var goAliasDraft = ""
     @FocusState private var goAliasFieldFocused: Bool
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
+    @AppStorage("action.browser.visible")  private var showBrowser  = true
+    @AppStorage("action.copyURL.visible")  private var showCopyURL  = true
+    @AppStorage("action.qr.visible")       private var showQRIcon   = true
+    @AppStorage("action.logs.visible")     private var showLogsIcon = true
+    @AppStorage("action.terminal.visible") private var showTerminal = true
+    @AppStorage("action.editor.visible")   private var showEditor   = true
+    @AppStorage("action.finder.visible")   private var showFinder   = true
 
     private var takenPorts: Set<Int> {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
@@ -185,58 +193,82 @@ struct AppRowView: View {
     private var actionButtons: some View {
         HStack(spacing: 8) {
             if isActive {
-                Button {
-                    SystemClient.openBrowser(port: activePort)
-                } label: {
-                    Image(systemName: "globe")
+                if showBrowser {
+                    Button {
+                        SystemClient.openBrowser(port: activePort)
+                    } label: {
+                        Image(systemName: "globe")
+                    }
+                    .help("Open in browser")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.blue)
                 }
-                .help("Open in browser")
-                .buttonStyle(.plain)
-                .foregroundStyle(.blue)
 
-                Button {
-                    SystemClient.copyNetworkURL(port: activePort)
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
-                } label: {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                if showCopyURL {
+                    Button {
+                        SystemClient.copyNetworkURL(port: activePort)
+                        copied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .help(copied ? "Copied!" : "Copy network URL (for other devices)")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(copied ? .green : .secondary)
+                    .animation(.easeInOut(duration: 0.2), value: copied)
                 }
-                .help(copied ? "Copied!" : "Copy network URL (for other devices)")
-                .buttonStyle(.plain)
-                .foregroundStyle(copied ? .green : .secondary)
-                .animation(.easeInOut(duration: 0.2), value: copied)
 
-                Button { showQR = true } label: {
-                    Image(systemName: "qrcode")
+                if showQRIcon {
+                    Button { showQR = true } label: {
+                        Image(systemName: "qrcode")
+                    }
+                    .help("Show QR code to open on another device")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .popover(isPresented: $showQR, arrowEdge: .bottom) {
+                        QRPopover(port: activePort)
+                    }
                 }
-                .help("Show QR code to open on another device")
+            }
+
+            if showLogsIcon {
+                Button { showLogs = true } label: {
+                    Image(systemName: "text.alignleft")
+                }
+                .help("Show server logs")
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .popover(isPresented: $showQR, arrowEdge: .bottom) {
-                    QRPopover(port: activePort)
+                .popover(isPresented: $showLogs, arrowEdge: .bottom) {
+                    LogViewerView(buffer: model.logBuffer(for: app), appName: app.name)
                 }
             }
 
-            Button { model.openTerminal(for: app) } label: {
-                Image(systemName: "terminal")
+            if showTerminal {
+                Button { model.openTerminal(for: app) } label: {
+                    Image(systemName: "terminal")
+                }
+                .help("Open in Terminal")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .help("Open in Terminal")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
 
-            Button { model.openEditor(for: app) } label: {
-                Image(systemName: "chevron.left.forwardslash.chevron.right")
+            if showEditor {
+                Button { model.openEditor(for: app) } label: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                }
+                .help("Open in VS Code")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .help("Open in VS Code")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
 
-            Button { model.openFinder(for: app) } label: {
-                Image(systemName: "folder")
+            if showFinder {
+                Button { model.openFinder(for: app) } label: {
+                    Image(systemName: "folder")
+                }
+                .help("Open in Finder")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .help("Open in Finder")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
         }
     }
 

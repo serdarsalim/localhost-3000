@@ -184,6 +184,10 @@ final class AppModel: ObservableObject {
 
     var goLinksEnabled: Bool { defaults.bool(forKey: "goLinksEnabled") }
 
+    func logBuffer(for app: DevApp) -> LogBuffer {
+        processManager.logBuffer(for: app.name)
+    }
+
     func openTerminal(for app: DevApp) {
         guard let root = portfolioRoot else { return }
         SystemClient.openTerminal(at: root.appendingPathComponent(app.name))

@@ -102,6 +102,36 @@ enum SystemClient {
         return results
     }
 
+    /// Processes listening on a TCP port. Returns (pid, command-line) for each holder.
+    static func processesOnPort(_ port: Int) -> [(pid: Int32, command: String)] {
+        let out = runCommand("/usr/sbin/lsof", ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN"])
+        var results: [(Int32, String)] = []
+        var seen = Set<Int32>()
+        for line in out.components(separatedBy: .newlines).dropFirst() {
+            let cols = line.split(separator: " ", omittingEmptySubsequences: true)
+            guard cols.count >= 2, let pid = Int32(cols[1]), !seen.contains(pid) else { continue }
+            seen.insert(pid)
+            let cmd = describePID(pid)
+            results.append((pid, cmd))
+        }
+        return results
+    }
+
+    /// Short human-readable command line for a PID (e.g. "convex-local-backend --port 3210").
+    static func describePID(_ pid: Int32) -> String {
+        let out = runCommand("/bin/ps", ["-p", "\(pid)", "-o", "command="])
+        let line = out.trimmingCharacters(in: .whitespacesAndNewlines)
+        if line.count > 120 { return String(line.prefix(117)) + "…" }
+        return line
+    }
+
+    static func killPID(_ pid: Int32) {
+        kill(pid, SIGTERM)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
+            kill(pid, SIGKILL)
+        }
+    }
+
     static func killPort(_ port: Int) {
         let output = runCommand("/usr/sbin/lsof", ["-ti", "TCP:\(port)"])
         for pidStr in output.components(separatedBy: .newlines) {
