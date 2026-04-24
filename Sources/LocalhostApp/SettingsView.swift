@@ -13,100 +13,183 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Settings")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.bottom, 20)
+            HStack {
+                Text("Settings")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+            .padding(.bottom, 14)
 
-            VStack(alignment: .leading, spacing: 16) {
-
-                Toggle(isOn: $launchAtStartup) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Launch at startup")
-                        Text("Start Localhost automatically when you log in.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    generalSection
+                    goLinksSection
+                    actionIconsSection
                 }
-                .onChange(of: launchAtStartup) { _, enabled in
-                    if enabled { try? SMAppService.mainApp.register() }
-                    else { try? SMAppService.mainApp.unregister() }
-                }
-
-                Divider()
-
-                Toggle(isOn: $menuBarQuickLaunch) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Menu bar quick launch")
-                        Text("Click the menu bar icon and your apps appear right there — start or stop any server without opening the app at all.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle(isOn: $goLinksEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("go/ links")
-                            Text("Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.")
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .onChange(of: goLinksEnabled) { _, enabled in
-                        model.setGoLinksEnabled(enabled)
-                    }
-
-                    if goLinksEnabled {
-                        if goLinksSystemSetup {
-                            HStack {
-                                Label("System routing active — go/alias works in any browser.", systemImage: "checkmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                                Spacer()
-                                Button(isSettingUp ? "Reinstalling…" : "Reinstall") {
-                                    Task { await runSetup() }
-                                }
-                                .font(.caption)
-                                .disabled(isSettingUp)
-                            }
-                        } else {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("One-time setup required. Adds a local hostname and installs a port forwarder so go/alias works in any browser. Requires your password once.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                HStack {
-                                    Button(isSettingUp ? "Setting up…" : "Setup System") {
-                                        Task { await runSetup() }
-                                    }
-                                    .disabled(isSettingUp)
-                                    if let err = setupError {
-                                        Text(err).font(.caption).foregroundStyle(.red)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Spacer()
+            Divider()
 
             HStack {
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.return)
             }
-            .padding(.top, 20)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
         }
-        .padding(28)
-        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 420 : 360)
+        .frame(width: 520, height: 640)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
         }
+    }
+
+    private var generalSection: some View {
+        settingsGroup(title: "General") {
+            settingsRow(
+                title: "Launch at startup",
+                description: "Start Localhost automatically when you log in."
+            ) {
+                Toggle("", isOn: $launchAtStartup)
+                    .labelsHidden()
+                    .onChange(of: launchAtStartup) { _, enabled in
+                        if enabled { try? SMAppService.mainApp.register() }
+                        else { try? SMAppService.mainApp.unregister() }
+                    }
+            }
+            Divider().padding(.leading, 12)
+            settingsRow(
+                title: "Menu bar quick launch",
+                description: "Click the menu bar icon to start or stop any server without opening the app."
+            ) {
+                Toggle("", isOn: $menuBarQuickLaunch).labelsHidden()
+            }
+        }
+    }
+
+    private var goLinksSection: some View {
+        settingsGroup(title: "Browser shortcuts") {
+            settingsRow(
+                title: "go/ links",
+                description: "Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias."
+            ) {
+                Toggle("", isOn: $goLinksEnabled)
+                    .labelsHidden()
+                    .onChange(of: goLinksEnabled) { _, enabled in
+                        model.setGoLinksEnabled(enabled)
+                    }
+            }
+
+            if goLinksEnabled {
+                Divider().padding(.leading, 12)
+                goLinksSetupRow
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var goLinksSetupRow: some View {
+        if goLinksSystemSetup {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("System routing active — go/alias works in any browser.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(isSettingUp ? "Reinstalling…" : "Reinstall") {
+                    Task { await runSetup() }
+                }
+                .font(.caption)
+                .disabled(isSettingUp)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("One-time setup required. Adds a local hostname and installs a port forwarder so go/alias works in any browser. Requires your password once.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button(isSettingUp ? "Setting up…" : "Setup System") {
+                        Task { await runSetup() }
+                    }
+                    .disabled(isSettingUp)
+                    if let err = setupError {
+                        Text(err).font(.caption).foregroundStyle(.red)
+                    }
+                }
+            }
+        }
+    }
+
+    private var actionIconsSection: some View {
+        settingsGroup(
+            title: "Action icons",
+            subtitle: "Choose which icons show in each app row."
+        ) {
+            ForEach(Array(ActionIcon.all.enumerated()), id: \.element.id) { idx, icon in
+                if idx > 0 { Divider().padding(.leading, 44) }
+                ActionIconToggleRow(icon: icon)
+            }
+        }
+    }
+
+    // MARK: - Layout helpers
+
+    private func settingsGroup<Content: View>(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.leading, 2)
+
+            VStack(spacing: 0) { content() }
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+        }
+    }
+
+    private func settingsRow<Trailing: View>(
+        title: String,
+        description: String,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            trailing()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 
     private func runSetup() async {
