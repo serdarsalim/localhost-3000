@@ -2,13 +2,15 @@
 
 **Free, open source macOS app.** Point it at your projects folder and get a one-click dashboard for all your dev servers — no terminal, no account, no subscription.
 
-<!-- screenshot or demo GIF here -->
+![OpenPort dashboard](openportnew.webp)
 
 ---
 
 ## Download
 
 **[⬇ Download for macOS](https://github.com/serdarsalim/localhost-3000/releases/latest/download/openport-macos.zip)** — unzip, double-click, done.
+
+**[🌐 Website](https://serdarsalim.com/openport)** — full details and screenshots.
 
 > First launch: macOS will warn "unidentified developer" because the app isn't signed with a paid Apple Developer certificate. Right-click the app → **Open** → **Open** to get past it. macOS only asks once.
 
