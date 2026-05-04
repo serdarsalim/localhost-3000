@@ -85,9 +85,9 @@ struct DashboardView: View {
     private var toolbar: some View {
         HStack(spacing: 8) {
             Spacer()
-            if model.isLoading {
-                ProgressView().scaleEffect(0.7)
-            }
+            ProgressView()
+                .scaleEffect(0.55)
+                .opacity(model.isLoading ? 1 : 0)
             TextField("Search", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
