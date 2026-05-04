@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-APP_NAME="Localhost 3000"
-BUNDLE_ID="com.serdarsalim.localhost3000"
+APP_NAME="OpenPort"
+BUNDLE_ID="com.serdarsalim.openport"
 EXECUTABLE="LocalhostApp"
 VERSION=$(date +%Y.%m.%d)
 BUILD=$(date +%Y%m%d%H%M%S)
@@ -80,7 +80,7 @@ codesign --verify --deep --strict "$APP_DIR"
 
 echo "▸ Packaging..."
 cd dist
-ZIP_NAME="localhost-3000-macos.zip"
+ZIP_NAME="openport-macos.zip"
 rm -f "$ZIP_NAME"
 ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_NAME"
 cd ..

@@ -8,7 +8,7 @@ struct LocalhostApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup("Localhost 3000") {
+        WindowGroup("OpenPort") {
             ContentView()
                 .environmentObject(appDelegate.model)
         }
@@ -94,7 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(.separator())
         }
 
-        menu.addItem(NSMenuItem(title: "Show Localhost", action: #selector(showWindow), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Show OpenPort", action: #selector(showWindow), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem?.menu = menu

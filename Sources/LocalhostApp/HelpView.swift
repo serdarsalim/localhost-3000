@@ -10,7 +10,7 @@ struct HelpView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     section("What is this?") {
-                        text("Localhost 3000 scans a folder of web projects and lets you start, stop, and open their dev servers without touching the terminal. Any project with a \"dev\" script in its package.json shows up here.")
+                        text("OpenPort scans a folder of web projects and lets you start, stop, and open their dev servers without touching the terminal. Any project with a \"dev\" script in its package.json shows up here.")
                     }
 
                     section("First time setup") {
@@ -62,7 +62,7 @@ struct HelpView: View {
             Image(systemName: "globe")
                 .font(.title2)
                 .foregroundStyle(.blue)
-            Text("Localhost 3000 — Help")
+            Text("OpenPort — Help")
                 .font(.headline)
             Spacer()
             Button("Done") { dismiss() }

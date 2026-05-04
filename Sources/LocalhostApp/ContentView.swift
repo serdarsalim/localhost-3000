@@ -34,7 +34,7 @@ struct WelcomeView: View {
             Image(systemName: "network")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
-            Text("Localhost 3000")
+            Text("OpenPort")
                 .font(.title)
                 .fontWeight(.semibold)
             Text("Pick your portfolio root folder to get started.")

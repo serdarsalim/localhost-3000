@@ -1,4 +1,4 @@
-# Localhost 3000
+# OpenPort — Dev Manager
 
 **Free, open source macOS app.** Point it at your projects folder and get a one-click dashboard for all your dev servers — no terminal, no account, no subscription.
 
@@ -8,7 +8,7 @@
 
 ## Download
 
-**[⬇ Download for macOS](https://github.com/serdarsalim/localhost-3000/releases/latest/download/localhost-3000-macos.zip)** — unzip, double-click, done.
+**[⬇ Download for macOS](https://github.com/serdarsalim/localhost-3000/releases/latest/download/openport-macos.zip)** — unzip, double-click, done.
 
 > First launch: macOS will warn "unidentified developer" because the app isn't signed with a paid Apple Developer certificate. Right-click the app → **Open** → **Open** to get past it. macOS only asks once.
 
@@ -18,7 +18,7 @@
 
 ## What it does
 
-If you work on multiple web projects, you know the routine: cd into a folder, remember which port it uses, open a terminal tab, run `npm run dev`, repeat for every project. Localhost 3000 replaces all of that.
+If you work on multiple web projects, you know the routine: cd into a folder, remember which port it uses, open a terminal tab, run `npm run dev`, repeat for every project. OpenPort replaces all of that.
 
 Point it at the folder that holds all your projects (`~/my-portfolio`, `~/code`, wherever). It scans for any project with a `dev` script and shows them in a dashboard. Start a server with one click. Stop it with one click. That's the core.
 
@@ -50,7 +50,7 @@ No Xcode needed.
 git clone https://github.com/serdarsalim/localhost-3000.git
 cd localhost-3000
 ./build-app.sh
-open "dist/Localhost 3000.app"
+open "dist/OpenPort.app"
 ```
 
 ---
@@ -140,7 +140,7 @@ Open Settings from the gear icon in the footer.
 
 | Setting | What it does |
 |---------|-------------|
-| **Launch at startup** | Starts Localhost 3000 automatically when you log in |
+| **Launch at startup** | Starts OpenPort automatically when you log in |
 | **Menu bar quick launch** | Adds a menu bar icon with your full app list — start/stop any server without opening the main window |
 | **go/ links** | Enables browser shortcuts and inline alias editing in the dashboard |
 
@@ -213,4 +213,4 @@ Right-click the app → Open → Open. macOS only asks once.
 ./build-app.sh
 ```
 
-The new app lands in `dist/Localhost 3000.app`. Quit the old one and open the new one.
+The new app lands in `dist/OpenPort.app`. Quit the old one and open the new one.

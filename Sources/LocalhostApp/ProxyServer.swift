@@ -62,10 +62,10 @@ final class ProxyServer: @unchecked Sendable {
                 let list = routes.sorted { $0.key < $1.key }
                     .map { "  go/\($0.key)  →  localhost:\($0.value)" }
                     .joined(separator: "\n")
-                let body = "Localhost 3000 — go links\n\n\(list.isEmpty ? "(none configured)" : list)"
+                let body = "OpenPort — go links\n\n\(list.isEmpty ? "(none configured)" : list)"
                 response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             } else {
-                let body = "go/\(alias) is not configured in Localhost 3000."
+                let body = "go/\(alias) is not configured in OpenPort."
                 response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             }
 
