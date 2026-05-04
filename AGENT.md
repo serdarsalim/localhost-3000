@@ -11,15 +11,15 @@ No Xcode. Built entirely with Swift Package Manager.
 ## Rules — do this after every code change
 
 1. `./build-app.sh` — rebuild the app bundle
-2. Kill and relaunch: `pkill -x "LocalhostApp" 2>/dev/null; sleep 1; open "dist/Localhost 3000.app"`
+2. Kill and relaunch: `pkill -x "LocalhostApp" 2>/dev/null; sleep 1; open "dist/OpenPort.app"`
 3. Commit and push to GitHub
-4. Upload the zip to the GitHub release: `gh release upload v0.1.0 dist/localhost-3000-macos.zip --clobber --repo serdarsalim/localhost-3000`
+4. Upload the zip to the GitHub release: `gh release upload v0.1.0 dist/openport-macos.zip --clobber --repo serdarsalim/openport`
 
 Do not ask. Just do it every time, in that order.
 
 One-liner to do steps 1–2 together:
 ```bash
-bash build-app.sh 2>&1 | tail -4 && gh release upload v0.1.0 dist/localhost-3000-macos.zip --clobber -R serdarsalim/localhost-3000 && pkill -x "LocalhostApp" 2>/dev/null; sleep 1 && open "dist/Localhost 3000.app"
+bash build-app.sh 2>&1 | tail -4 && gh release upload v0.1.0 dist/openport-macos.zip --clobber -R serdarsalim/openport && pkill -x "LocalhostApp" 2>/dev/null; sleep 1 && open "dist/OpenPort.app"
 ```
 
 ---
@@ -29,7 +29,7 @@ bash build-app.sh 2>&1 | tail -4 && gh release upload v0.1.0 dist/localhost-3000
 ```bash
 swift build -c release      # compile only
 ./build-app.sh              # compile + bundle + sign → dist/Localhost 3000.app
-open "dist/Localhost 3000.app"
+open "dist/OpenPort.app"
 ```
 
 ---
@@ -150,5 +150,5 @@ SystemClient — static, AppKit calls + lsof-based server detection
 
 ## GitHub
 
-Repo: https://github.com/serdarsalim/localhost-3000
-Release: v0.1.0 — asset `localhost-3000-macos.zip`
+Repo: https://github.com/serdarsalim/openport
+Release: v0.1.0 — asset `openport-macos.zip`

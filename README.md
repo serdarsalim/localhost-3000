@@ -8,7 +8,7 @@
 
 ## Download
 
-**[⬇ Download for macOS](https://github.com/serdarsalim/localhost-3000/releases/latest/download/openport-macos.zip)** — unzip, double-click, done.
+**[⬇ Download for macOS](https://github.com/serdarsalim/openport/releases/latest/download/openport-macos.zip)** — unzip, double-click, done.
 
 **[🌐 Website](https://serdarsalim.com/openport)** — full details and screenshots.
 
@@ -49,8 +49,8 @@ On top of that:
 No Xcode needed.
 
 ```bash
-git clone https://github.com/serdarsalim/localhost-3000.git
-cd localhost-3000
+git clone https://github.com/serdarsalim/openport.git
+cd openport
 ./build-app.sh
 open "dist/OpenPort.app"
 ```
