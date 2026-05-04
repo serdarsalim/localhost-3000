@@ -34,10 +34,20 @@ struct AppRowView: View {
     }
 
     private var appName: some View {
-        Text(app.name)
-            .fontWeight(.medium)
-            .foregroundStyle(.primary)
-            .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
+        HStack(spacing: 6) {
+            Text(app.name)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
+            if app.hasBackend { backendDot }
+        }
+        .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
+    }
+
+    private var backendDot: some View {
+        Circle()
+            .fill(app.backendRunning ? Color.green : Color.secondary.opacity(0.35))
+            .frame(width: 6, height: 6)
+            .help(app.backendRunning ? "Backend (\(app.backendScriptName ?? "")) running" : "Backend (\(app.backendScriptName ?? "")) configured but not running")
     }
 
     private var goLinkBadge: some View {

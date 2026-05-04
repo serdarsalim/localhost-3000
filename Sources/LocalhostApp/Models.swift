@@ -18,7 +18,11 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var externalPID: Int32?  // PID of a detached process we can kill
     var goAlias: String      // alias used in go/<alias> routing
     var gitStatus: GitStatus
-    var devScript: String?   // raw dev script string, used to patch port at launch
+    var devScript: String?           // raw dev script string, used to patch port at launch
+    var devScriptName: String?       // npm script name to invoke (e.g. "dev" or "dev:frontend")
+    var backendScriptName: String?   // optional sibling script to spawn (e.g. "dev:backend")
+    var hasBackend: Bool { backendScriptName != nil }
+    var backendRunning: Bool = false // true when we've spawned the backend sidecar
 }
 
 struct GitStatus: Sendable, Hashable {

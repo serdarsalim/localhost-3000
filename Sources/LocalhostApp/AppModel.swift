@@ -23,6 +23,7 @@ final class AppModel: ObservableObject {
             self.update(name) { app in
                 app.isRunning = false
                 app.portStatus = .crashed
+                app.backendRunning = false
             }
         }
         if defaults.bool(forKey: "goLinksEnabled") {
@@ -51,6 +52,14 @@ final class AppModel: ObservableObject {
         let devScripts = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
             guard let s = item.devScript else { return nil }
             return (item.name, s)
+        })
+        let devScriptNames = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
+            guard let n = item.devScriptName else { return nil }
+            return (item.name, n)
+        })
+        let backendScriptNames = Dictionary(uniqueKeysWithValues: scanned.compactMap { item -> (String, String)? in
+            guard let n = item.backendScriptName else { return nil }
+            return (item.name, n)
         })
         let ports = portStore.assign(to: appNames, scriptPorts: scriptPorts)
         let goAliases = goLinkStore.load()
@@ -118,7 +127,10 @@ final class AppModel: ObservableObject {
                 externalPID: externalPID,
                 goAlias: goAlias,
                 gitStatus: gitStatuses[name] ?? .unknown,
-                devScript: devScripts[name]
+                devScript: devScripts[name],
+                devScriptName: devScriptNames[name],
+                backendScriptName: backendScriptNames[name],
+                backendRunning: processManager.isBackendRunning(name: name)
             )
         }
 
@@ -127,8 +139,19 @@ final class AppModel: ObservableObject {
 
     func start(app: DevApp) {
         guard let root = portfolioRoot else { return }
-        processManager.start(name: app.name, port: app.port, in: root.appendingPathComponent(app.name), devScript: app.devScript)
-        update(app.name) { $0.isRunning = true; $0.portStatus = .running }
+        processManager.start(
+            name: app.name,
+            port: app.port,
+            in: root.appendingPathComponent(app.name),
+            devScript: app.devScript,
+            devScriptName: app.devScriptName,
+            backendScriptName: app.backendScriptName
+        )
+        update(app.name) {
+            $0.isRunning = true
+            $0.portStatus = .running
+            $0.backendRunning = app.backendScriptName != nil
+        }
         refreshProxyRoutes()
     }
 
@@ -140,7 +163,7 @@ final class AppModel: ObservableObject {
         }
         let port = app.detectedPort ?? app.port
         SystemClient.killPort(port)
-        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil }
+        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false }
         refreshProxyRoutes()
     }
 
@@ -154,6 +177,7 @@ final class AppModel: ObservableObject {
             apps[idx].portStatus = .free
             apps[idx].detectedPort = nil
             apps[idx].externalPID = nil
+            apps[idx].backendRunning = false
         }
         refreshProxyRoutes()
     }

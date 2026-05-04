@@ -14,6 +14,8 @@ struct AppScanner: Sendable {
         let name: String
         let scriptPort: Int?
         let devScript: String?
+        let devScriptName: String?      // npm script name to run for the frontend (dev or dev:frontend)
+        let backendScriptName: String?  // optional sibling script (dev:backend) to spawn alongside
     }
 
     /// Returns app names and any port hardcoded in their dev script.
@@ -34,11 +36,34 @@ struct AppScanner: Sendable {
             guard fm.fileExists(atPath: pkgPath.path),
                   let data = try? Data(contentsOf: pkgPath),
                   let pkg = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let scripts = pkg["scripts"] as? [String: Any],
-                  let devScript = scripts["dev"] as? String
+                  let scripts = pkg["scripts"] as? [String: Any]
             else { return nil }
 
-            return ScannedApp(name: name, scriptPort: extractPort(from: devScript), devScript: devScript)
+            // Prefer "dev"; fall back to "dev:frontend" for split frontend/backend setups.
+            let devScriptName: String
+            let devScript: String
+            if let s = scripts["dev"] as? String {
+                devScriptName = "dev"
+                devScript = s
+            } else if let s = scripts["dev:frontend"] as? String {
+                devScriptName = "dev:frontend"
+                devScript = s
+            } else {
+                return nil
+            }
+
+            // Only spawn dev:backend separately when the frontend script doesn't already orchestrate it.
+            let backendScriptName: String? = (devScriptName == "dev:frontend" && scripts["dev:backend"] != nil)
+                ? "dev:backend"
+                : nil
+
+            return ScannedApp(
+                name: name,
+                scriptPort: extractPort(from: devScript),
+                devScript: devScript,
+                devScriptName: devScriptName,
+                backendScriptName: backendScriptName
+            )
         }.sorted { $0.name < $1.name }
     }
 
