@@ -1,12 +1,36 @@
 # Localhost 3000
 
-A native macOS app for managing your local dev projects. Start, stop, and monitor any project in your portfolio folder without touching the terminal.
+**Free, open source macOS app.** Point it at your projects folder and get a one-click dashboard for all your dev servers — no terminal, no account, no subscription.
+
+<!-- screenshot or demo GIF here -->
+
+---
+
+## Download
+
+**[⬇ Download for macOS](https://github.com/serdarsalim/localhost-3000/releases/latest/download/localhost-3000-macos.zip)** — unzip, double-click, done.
+
+> First launch: macOS will warn "unidentified developer" because the app isn't signed with a paid Apple Developer certificate. Right-click the app → **Open** → **Open** to get past it. macOS only asks once.
+
+**Requirements:** macOS 14 (Sonoma) or later · [Node.js](https://nodejs.org) installed
 
 ---
 
 ## What it does
 
-Point it at a folder full of web projects (Next.js, Vite, etc.) and you get a live dashboard. One click starts a dev server. Another stops it. Port conflicts, external processes, git status, network URLs — all visible at a glance.
+If you work on multiple web projects, you know the routine: cd into a folder, remember which port it uses, open a terminal tab, run `npm run dev`, repeat for every project. Localhost 3000 replaces all of that.
+
+Point it at the folder that holds all your projects (`~/my-portfolio`, `~/code`, wherever). It scans for any project with a `dev` script and shows them in a dashboard. Start a server with one click. Stop it with one click. That's the core.
+
+On top of that:
+
+- **Port management** — each project gets a port assigned automatically. Conflicts show up in orange before you start anything. Click a port to change it.
+- **go/ links** — type `http://go/myapp` in any browser to open a project, like internal tools at tech companies. Optional, one-time system setup.
+- **Git status** — see uncommitted changes for every project without opening a terminal.
+- **QR codes** — scan to open a running project on your phone over local Wi-Fi.
+- **External process detection** — if a server is already running (started in a terminal), the app sees it and lets you stop it from the dashboard.
+- **Menu bar quick launch** — start or stop any server from the menu bar without opening the main window.
+- **Works with Next.js, Vite, Nuxt, Express, Remix, and anything else that uses `npm run dev`**
 
 ---
 
@@ -14,34 +38,20 @@ Point it at a folder full of web projects (Next.js, Vite, etc.) and you get a li
 
 - macOS 14 (Sonoma) or later
 - [Node.js](https://nodejs.org) installed (the app runs `npm run dev` under the hood)
-- Your projects must have a `"dev"` script in their `package.json`
+- Projects need a `"dev"` or `"dev:frontend"` script in their `package.json`
 
 ---
 
-## How to build and run
+## Build from source
 
 No Xcode needed.
 
-**1. Clone or download this repo**
-
-**2. Build the app**
-
 ```bash
+git clone https://github.com/serdarsalim/localhost-3000.git
 cd localhost-3000
 ./build-app.sh
-```
-
-This compiles the Swift code and produces `dist/Localhost 3000.app`.
-
-**3. Open the app**
-
-```bash
 open "dist/Localhost 3000.app"
 ```
-
-Or double-click it in Finder.
-
-> First launch: macOS may warn "unidentified developer". Right-click the app → Open → Open anyway. This happens because the app isn't signed with a paid Apple developer certificate. It's safe — you built it yourself.
 
 ---
 
@@ -178,7 +188,7 @@ Closing the window doesn't quit the app. Running dev servers keep going. Reopen 
 ## Troubleshooting
 
 **"No apps found"**
-Your projects need a `"dev"` script in `package.json`. Check that the folder you picked is the right root and that at least one project has `"scripts": { "dev": "..." }`.
+Projects need a `"dev"` or `"dev:frontend"` script in `package.json`. Check that the folder you picked is the right root and that at least one project has either script defined.
 
 **A project won't start**
 Make sure `node` and `npm` are installed and accessible. The app looks for npm in `/opt/homebrew/bin` and `/usr/local/bin`. If you use `nvm`, set a default: `nvm alias default <version>`.
