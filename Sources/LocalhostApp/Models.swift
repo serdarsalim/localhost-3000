@@ -23,6 +23,7 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var backendScriptName: String?   // optional sibling script to spawn (e.g. "dev:backend")
     var hasBackend: Bool { backendScriptName != nil }
     var backendRunning: Bool = false // true when we've spawned the backend sidecar
+    var crashLog: String? = nil     // last stderr output captured on unexpected exit
 }
 
 struct GitStatus: Sendable, Hashable {

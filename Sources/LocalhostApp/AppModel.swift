@@ -24,6 +24,7 @@ final class AppModel: ObservableObject {
                 app.isRunning = false
                 app.portStatus = .crashed
                 app.backendRunning = false
+                app.crashLog = self.processManager.crashLog(for: name)
             }
         }
         if defaults.bool(forKey: "goLinksEnabled") {
@@ -162,7 +163,7 @@ final class AppModel: ObservableObject {
             kill(pid, SIGTERM)
         }
         let port = app.detectedPort ?? app.port
-        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false }
+        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false; $0.crashLog = nil }
         refreshProxyRoutes()
         Task.detached { SystemClient.killPort(port) }
     }

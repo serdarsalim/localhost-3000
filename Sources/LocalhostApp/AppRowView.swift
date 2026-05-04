@@ -15,6 +15,7 @@ struct AppRowView: View {
     @FocusState private var goAliasFieldFocused: Bool
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
     @State private var isHovered = false
+    @State private var showCrashLog = false
 
     private var takenPorts: Set<Int> {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
@@ -258,13 +259,28 @@ struct AppRowView: View {
     @ViewBuilder
     private var startStopButton: some View {
         if app.isRunning || app.portStatus == .crashed || app.portStatus == .detached {
-            Button { model.stop(app: app) } label: {
-                Image(systemName: "stop.fill")
-                    .font(.system(size: 14))
+            HStack(spacing: 4) {
+                Button { model.stop(app: app) } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 14))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.red)
+                .help("Stop server")
+
+                if app.portStatus == .crashed, app.crashLog != nil {
+                    Button { showCrashLog = true } label: {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Why did this fail?")
+                    .popover(isPresented: $showCrashLog, arrowEdge: .trailing) {
+                        CrashLogPopover(appName: app.name, log: app.crashLog ?? "")
+                    }
+                }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.red)
-            .help("Stop server")
             .frame(width: 28)
         } else {
             Button { model.start(app: app) } label: {
@@ -277,6 +293,33 @@ struct AppRowView: View {
             .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "Start server")
             .frame(width: 28)
         }
+    }
+}
+
+struct CrashLogPopover: View {
+    let appName: String
+    let log: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.orange)
+                Text("\(appName) — crash output")
+                    .font(.headline)
+            }
+            Divider()
+            ScrollView {
+                Text(log)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(maxHeight: 320)
+        }
+        .padding(16)
+        .frame(width: 520)
     }
 }
 
