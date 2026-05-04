@@ -162,17 +162,20 @@ final class AppModel: ObservableObject {
             kill(pid, SIGTERM)
         }
         let port = app.detectedPort ?? app.port
-        SystemClient.killPort(port)
         update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false }
         refreshProxyRoutes()
+        Task.detached { SystemClient.killPort(port) }
     }
 
     func stopAll() {
         processManager.stopAll()
+
+        // Collect ports and external PIDs before mutating state.
+        let portsToKill = apps.map { $0.detectedPort ?? $0.port }
+        let externalPIDs = apps.compactMap { $0.externalPID }
+
+        // Update UI immediately — don't wait for lsof.
         for idx in apps.indices {
-            if let pid = apps[idx].externalPID { kill(pid, SIGTERM) }
-            let port = apps[idx].detectedPort ?? apps[idx].port
-            SystemClient.killPort(port)
             apps[idx].isRunning = false
             apps[idx].portStatus = .free
             apps[idx].detectedPort = nil
@@ -180,6 +183,13 @@ final class AppModel: ObservableObject {
             apps[idx].backendRunning = false
         }
         refreshProxyRoutes()
+
+        // Fire lsof cleanup off the main thread — it's slow and only needed
+        // for processes that didn't respond to SIGTERM from processManager.
+        Task.detached {
+            for pid in externalPIDs { kill(pid, SIGTERM) }
+            for port in portsToKill { SystemClient.killPort(port) }
+        }
     }
 
     func updatePort(for app: DevApp, port: Int) {
