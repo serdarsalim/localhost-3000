@@ -102,6 +102,10 @@ struct DashboardView: View {
 
             Spacer()
 
+            Text(appVersion)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.tertiary)
+
             footerIcon(schemeRaw == "dark" ? "moon.fill" : "sun.max.fill",
                        help: schemeRaw == "dark" ? "Switch to light mode" : "Switch to dark mode") {
                 schemeRaw = schemeRaw == "dark" ? "light" : "dark"

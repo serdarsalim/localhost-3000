@@ -34,7 +34,7 @@ struct AppRowView: View {
         }
         .padding(.vertical, 5)
         .padding(.horizontal, 10)
-        .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+        .background(isHovered ? Color.primary.opacity(0.09) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .onHover { isHovered = $0 }
     }

@@ -1,4 +1,4 @@
-# Localhost 3000 — Agent Instructions
+# OpenPort — Agent Instructions
 
 ## What this is
 
@@ -10,16 +10,21 @@ No Xcode. Built entirely with Swift Package Manager.
 
 ## Rules — do this after every code change
 
-1. `./build-app.sh` — rebuild the app bundle
-2. Kill and relaunch: `pkill -x "LocalhostApp" 2>/dev/null; sleep 1; open "dist/OpenPort.app"`
-3. Commit and push to GitHub
-4. Upload the zip to the GitHub release: `gh release upload v0.1.0 dist/openport-macos.zip --clobber --repo serdarsalim/openport`
+1. Commit all changes to main first
+2. `./build-app.sh` — rebuilds the app AND auto-generates `Sources/LocalhostApp/AppVersion.swift` with the current Malaysia time (MYT). The version appears in the app footer.
+3. Kill and relaunch: `pkill -x "OpenPort" 2>/dev/null; sleep 1; open "dist/OpenPort.app"`
+4. Only commit + push + upload release when user says "push"
 
 Do not ask. Just do it every time, in that order.
 
-One-liner to do steps 1–2 together:
+Build + relaunch one-liner:
 ```bash
-bash build-app.sh 2>&1 | tail -4 && gh release upload v0.1.0 dist/openport-macos.zip --clobber -R serdarsalim/openport && pkill -x "LocalhostApp" 2>/dev/null; sleep 1 && open "dist/OpenPort.app"
+cd /Users/slm/my-portfolio/localhost-3000 && bash build-app.sh 2>&1 | tail -4 && pkill -x "OpenPort" 2>/dev/null; sleep 1 && open "dist/OpenPort.app"
+```
+
+Push one-liner (only when user says push):
+```bash
+cd /Users/slm/my-portfolio/localhost-3000 && git push && gh release upload v0.1.0 dist/openport-macos.zip --clobber -R serdarsalim/openport
 ```
 
 ---
