@@ -4,3 +4,4 @@ dist/
 *.o
 *.d
 make-icon.swift
+Sources/LocalhostApp/AppVersion.swift
