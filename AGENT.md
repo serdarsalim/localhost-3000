@@ -17,9 +17,9 @@ No Xcode. Built entirely with Swift Package Manager.
 
 Do not ask. Just do it every time, in that order.
 
-Build + relaunch one-liner:
+Build + relaunch one-liner (always use absolute path for open — shell cwd resets between commands):
 ```bash
-cd /Users/slm/my-portfolio/localhost-3000 && bash build-app.sh 2>&1 | tail -4 && pkill -x "OpenPort" 2>/dev/null; sleep 1 && open "dist/OpenPort.app"
+cd /Users/slm/my-portfolio/localhost-3000 && bash build-app.sh 2>&1 | tail -4 && pkill -x "OpenPort" 2>/dev/null; sleep 1 && open "/Users/slm/my-portfolio/localhost-3000/dist/OpenPort.app"
 ```
 
 Push one-liner (only when user says push):
