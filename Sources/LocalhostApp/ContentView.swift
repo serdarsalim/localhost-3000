@@ -54,7 +54,13 @@ struct DashboardView: View {
     @Binding var schemeRaw: String
     @State private var showHelp = false
     @State private var showSettings = false
+    @State private var searchText = ""
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
+
+    private var filteredApps: [DevApp] {
+        guard !searchText.isEmpty else { return model.apps }
+        return model.apps.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -77,11 +83,14 @@ struct DashboardView: View {
     }
 
     private var toolbar: some View {
-        HStack {
+        HStack(spacing: 8) {
             Spacer()
             if model.isLoading {
                 ProgressView().scaleEffect(0.7)
             }
+            TextField("Search", text: $searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 180)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -151,7 +160,7 @@ struct DashboardView: View {
             .listRowBackground(Color.clear)
             .allowsHitTesting(false)
 
-            ForEach(model.apps) { app in
+            ForEach(filteredApps) { app in
                 AppRowView(app: app, model: model)
                     .listRowSeparator(.visible)
             }
