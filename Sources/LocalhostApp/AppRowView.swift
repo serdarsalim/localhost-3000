@@ -14,6 +14,7 @@ struct AppRowView: View {
     @State private var goAliasDraft = ""
     @FocusState private var goAliasFieldFocused: Bool
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
+    @State private var isHovered = false
 
     private var takenPorts: Set<Int> {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
@@ -31,6 +32,10 @@ struct AppRowView: View {
             actionButtons
         }
         .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .onHover { isHovered = $0 }
     }
 
     private var appName: some View {
