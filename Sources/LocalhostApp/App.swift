@@ -13,6 +13,17 @@ struct LocalhostApp: App {
                 .environmentObject(appDelegate.model)
         }
         .windowResizability(.contentMinSize)
+
+        Window("Settings", id: "settings") {
+            SettingsView()
+                .environmentObject(appDelegate.model)
+        }
+        .windowResizability(.contentSize)
+
+        Window("OpenPort — Help", id: "help") {
+            HelpView()
+        }
+        .windowResizability(.contentMinSize)
     }
 }
 
@@ -95,9 +106,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         menu.addItem(NSMenuItem(title: "Show OpenPort", action: #selector(showWindow), keyEquivalent: ""))
+
+        let whatsNewItem = NSMenuItem(title: "What's new", action: #selector(showWhatsNew), keyEquivalent: "")
+        whatsNewItem.target = self
+        menu.addItem(whatsNewItem)
+
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem?.menu = menu
+    }
+
+    @objc private func showWhatsNew() {
+        showWindow()
+        NotificationCenter.default.post(name: .openPortShowWhatsNew, object: nil)
     }
 
     @objc private func toggleApp(_ sender: NSMenuItem) {
@@ -112,4 +133,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
+}
+
+extension Notification.Name {
+    static let openPortShowWhatsNew = Notification.Name("OpenPortShowWhatsNew")
 }

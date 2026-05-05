@@ -5,6 +5,7 @@ import AppKit
 @MainActor
 final class AppModel: ObservableObject {
     @Published var apps: [DevApp] = []
+    @Published var orphans: [OrphanPort] = []
     @Published var portfolioRoot: URL?
     @Published var isLoading = false
 
@@ -90,18 +91,31 @@ final class AppModel: ObservableObject {
 
         let (gitStatuses, portListening, detected) = await (gitTask, portTask, detectTask)
 
-        let detectedByDir: [String: DetectedServer] = Dictionary(
-            detected.map { ($0.directory, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
+        // Group all detected listeners by their cwd. One cwd may have many ports.
+        var detectedByDir: [String: [DetectedServer]] = [:]
+        for entry in detected {
+            detectedByDir[entry.directory, default: []].append(entry)
+        }
+
+        let appDirSet = Set(appNames.map { root.appendingPathComponent($0).path })
 
         apps = appNames.map { name in
             let appDir = root.appendingPathComponent(name).path
             let assignedPort = ports[name] ?? 3000
             let weStartedIt = runningNames.contains(name)
             let assignedPortListening = portListening[name] ?? false
-            let externalServer = detectedByDir[appDir]
+            let listenersForApp = detectedByDir[appDir] ?? []
             let goAlias = goAliases[name] ?? GoLinkStore.defaultAlias(for: name)
+
+            // Pick a primary listener: prefer the one matching the assigned port,
+            // otherwise the lowest-numbered port.
+            let primary: DetectedServer? = listenersForApp.first(where: { $0.port == assignedPort })
+                ?? listenersForApp.min(by: { $0.port < $1.port })
+
+            let extras: [DetectedPort] = listenersForApp
+                .filter { $0.port != primary?.port || $0.pid != primary?.pid }
+                .map { DetectedPort(pid: $0.pid, port: $0.port, command: $0.command) }
+                .sorted { $0.port < $1.port }
 
             let status: PortStatus
             let detectedPort: Int?
@@ -111,7 +125,7 @@ final class AppModel: ObservableObject {
                 status = .running; detectedPort = nil; externalPID = nil
             } else if weStartedIt && !assignedPortListening {
                 status = .crashed; detectedPort = nil; externalPID = nil
-            } else if let server = externalServer {
+            } else if let server = primary {
                 status = .detached; detectedPort = server.port; externalPID = server.pid
             } else if assignedPortListening {
                 status = .external; detectedPort = nil; externalPID = nil
@@ -131,11 +145,60 @@ final class AppModel: ObservableObject {
                 devScript: devScripts[name],
                 devScriptName: devScriptNames[name],
                 backendScriptName: backendScriptNames[name],
-                backendRunning: processManager.isBackendRunning(name: name)
+                backendRunning: processManager.isBackendRunning(name: name),
+                extraPorts: extras
             )
         }
 
+        // Anything left over — listeners whose cwd isn't a known app folder.
+        // System daemons, installed Mac apps, and OpenPort itself are filtered
+        // out: killing those breaks Continuity, Tailscale, ssh tunnels, etc.
+        orphans = detected
+            .filter { !appDirSet.contains($0.directory) }
+            .filter { !Self.isSystemOrInstalledApp($0) }
+            .map { OrphanPort(pid: $0.pid, port: $0.port, directory: $0.directory, command: $0.command) }
+            .sorted { $0.port < $1.port }
+
         refreshProxyRoutes()
+    }
+
+    /// Hide listeners that aren't user dev servers — system daemons, Mac apps,
+    /// ssh tunnels, OpenPort itself.
+    private static func isSystemOrInstalledApp(_ entry: DetectedServer) -> Bool {
+        let cmd = entry.command
+        let dir = entry.directory
+
+        let blockedCommandPrefixes = [
+            "/System/", "/usr/", "/Library/", "/Applications/",
+            "/sbin/", "/bin/"
+        ]
+        if blockedCommandPrefixes.contains(where: { cmd.hasPrefix($0) }) { return true }
+
+        if cmd.contains("LocalhostApp") || cmd.contains("OpenPort.app") { return true }
+
+        if dir.isEmpty || dir == "/" { return true }
+
+        let blockedDirPrefixes = [
+            "/System/", "/Library/", "/private/var/", "/Applications/"
+        ]
+        if blockedDirPrefixes.contains(where: { dir.hasPrefix($0) }) { return true }
+
+        return false
+    }
+
+    /// Kill an orphan listener by PID. Scoped narrowly — does NOT participate
+    /// in stopAll(), since orphans may be unrelated apps the user cares about.
+    func stopOrphan(_ orphan: OrphanPort) {
+        kill(orphan.pid, SIGTERM)
+        orphans.removeAll { $0.id == orphan.id }
+    }
+
+    func liveLog(for app: DevApp) -> String? {
+        processManager.liveLog(for: app.name)
+    }
+
+    func clearLog(for app: DevApp) {
+        processManager.clearLog(for: app.name)
     }
 
     func start(app: DevApp) {
@@ -163,32 +226,36 @@ final class AppModel: ObservableObject {
             kill(pid, SIGTERM)
         }
         let port = app.detectedPort ?? app.port
-        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false; $0.crashLog = nil }
+        let extraPids = app.extraPorts.map(\.pid)
+        update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false; $0.crashLog = nil; $0.extraPorts = [] }
         refreshProxyRoutes()
-        Task.detached { SystemClient.killPort(port) }
+        Task.detached {
+            for pid in extraPids { kill(pid, SIGTERM) }
+            SystemClient.killPort(port)
+        }
     }
 
     func stopAll() {
         processManager.stopAll()
 
-        // Collect ports and external PIDs before mutating state.
+        // Stays scoped to listed apps — orphans are deliberately untouched.
         let portsToKill = apps.map { $0.detectedPort ?? $0.port }
         let externalPIDs = apps.compactMap { $0.externalPID }
+        let extraPIDs = apps.flatMap { $0.extraPorts.map(\.pid) }
 
-        // Update UI immediately — don't wait for lsof.
         for idx in apps.indices {
             apps[idx].isRunning = false
             apps[idx].portStatus = .free
             apps[idx].detectedPort = nil
             apps[idx].externalPID = nil
             apps[idx].backendRunning = false
+            apps[idx].extraPorts = []
         }
         refreshProxyRoutes()
 
-        // Fire lsof cleanup off the main thread — it's slow and only needed
-        // for processes that didn't respond to SIGTERM from processManager.
         Task.detached {
             for pid in externalPIDs { kill(pid, SIGTERM) }
+            for pid in extraPIDs { kill(pid, SIGTERM) }
             for port in portsToKill { SystemClient.killPort(port) }
         }
     }

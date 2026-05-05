@@ -24,6 +24,22 @@ struct DevApp: Identifiable, Sendable, Hashable {
     var hasBackend: Bool { backendScriptName != nil }
     var backendRunning: Bool = false // true when we've spawned the backend sidecar
     var crashLog: String? = nil     // last stderr output captured on unexpected exit
+    var extraPorts: [DetectedPort] = [] // additional ports bound by this app's cwd
+}
+
+struct DetectedPort: Sendable, Hashable, Identifiable {
+    var id: String { "\(pid):\(port)" }
+    let pid: Int32
+    let port: Int
+    let command: String
+}
+
+struct OrphanPort: Identifiable, Sendable, Hashable {
+    var id: String { "\(pid):\(port)" }
+    let pid: Int32
+    let port: Int
+    let directory: String
+    let command: String
 }
 
 struct GitStatus: Sendable, Hashable {

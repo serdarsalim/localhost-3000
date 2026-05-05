@@ -5,7 +5,7 @@ final class ProcessManager {
     private var running: [String: Process] = [:]
     private var backends: [String: Process] = [:]
     private var stopping: Set<String> = []
-    private var stderrBuffers: [String: StderrBuffer] = [:]
+    private var logBuffers: [String: LogBuffer] = [:]
     private(set) var crashLogs: [String: String] = [:]  // name → last stderr on unexpected exit
 
     var onTerminated: ((String) -> Void)?
@@ -33,10 +33,10 @@ final class ProcessManager {
         // Clear any previous crash log when restarting.
         crashLogs.removeValue(forKey: name)
 
-        let buffer = StderrBuffer()
-        stderrBuffers[name] = buffer
+        let buffer = LogBuffer()
+        logBuffers[name] = buffer
 
-        let frontend = makeProcess(directory: directory, env: env, command: command, stderrBuffer: buffer)
+        let frontend = makeProcess(directory: directory, env: env, command: command, logBuffer: buffer)
         frontend.terminationHandler = { [weak self, name] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -47,21 +47,20 @@ final class ProcessManager {
                     backend.terminate()
                 }
                 if unexpected {
-                    // Capture whatever the process last wrote to stderr.
-                    if let log = self.stderrBuffers[name]?.tail() {
+                    if let log = self.logBuffers[name]?.snapshot() {
                         self.crashLogs[name] = log
                     }
-                    self.stderrBuffers.removeValue(forKey: name)
+                    self.logBuffers.removeValue(forKey: name)
                     self.onTerminated?(name)
                 } else {
-                    self.stderrBuffers.removeValue(forKey: name)
+                    self.logBuffers.removeValue(forKey: name)
                 }
             }
         }
 
         if let backendName = backendScriptName {
             let backendCommand = "exec npm run \(backendName)"
-            let backend = makeProcess(directory: directory, env: env, command: backendCommand, stderrBuffer: nil)
+            let backend = makeProcess(directory: directory, env: env, command: backendCommand, logBuffer: buffer)
             backend.terminationHandler = { [weak self, name] _ in
                 Task { @MainActor [weak self] in
                     self?.backends.removeValue(forKey: name)
@@ -80,7 +79,7 @@ final class ProcessManager {
         crashLogs.removeValue(forKey: name)
         running[name]?.terminate()
         running.removeValue(forKey: name)
-        stderrBuffers.removeValue(forKey: name)
+        logBuffers.removeValue(forKey: name)
         if let backend = backends.removeValue(forKey: name), backend.isRunning {
             backend.terminate()
         }
@@ -92,7 +91,7 @@ final class ProcessManager {
         for process in backends.values where process.isRunning { process.terminate() }
         running.removeAll()
         backends.removeAll()
-        stderrBuffers.removeAll()
+        logBuffers.removeAll()
         crashLogs.removeAll()
     }
 
@@ -108,6 +107,15 @@ final class ProcessManager {
         crashLogs[name]
     }
 
+    /// Live log snapshot (stdout + stderr, line-merged) for a running app.
+    func liveLog(for name: String) -> String? {
+        logBuffers[name]?.snapshot()
+    }
+
+    func clearLog(for name: String) {
+        logBuffers[name]?.clear()
+    }
+
     private func baseEnvironment(port: Int, directory: URL) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["PORT"] = "\(port)"
@@ -118,23 +126,30 @@ final class ProcessManager {
         return env
     }
 
-    private func makeProcess(directory: URL, env: [String: String], command: String, stderrBuffer: StderrBuffer?) -> Process {
+    private func makeProcess(directory: URL, env: [String: String], command: String, logBuffer: LogBuffer?) -> Process {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-c", command]
         process.currentDirectoryURL = directory
         process.environment = env
-        process.standardOutput = FileHandle.nullDevice
 
-        if let buffer = stderrBuffer {
-            let pipe = Pipe()
-            process.standardError = pipe
-            pipe.fileHandleForReading.readabilityHandler = { handle in
+        if let buffer = logBuffer {
+            let outPipe = Pipe()
+            let errPipe = Pipe()
+            process.standardOutput = outPipe
+            process.standardError = errPipe
+            outPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+                buffer.append(text)
+            }
+            errPipe.fileHandleForReading.readabilityHandler = { handle in
                 let data = handle.availableData
                 guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
                 buffer.append(text)
             }
         } else {
+            process.standardOutput = FileHandle.nullDevice
             process.standardError = FileHandle.nullDevice
         }
 
@@ -157,11 +172,11 @@ final class ProcessManager {
     }
 }
 
-// Collects stderr lines in a ring buffer; thread-safe via NSLock.
-final class StderrBuffer: @unchecked Sendable {
+// Collects stdout + stderr lines in a ring buffer; thread-safe via NSLock.
+final class LogBuffer: @unchecked Sendable {
     private var lines: [String] = []
     private let lock = NSLock()
-    private let maxLines = 60
+    private let maxLines = 1000
 
     func append(_ text: String) {
         let incoming = text.components(separatedBy: "\n").filter { !$0.isEmpty }
@@ -171,10 +186,16 @@ final class StderrBuffer: @unchecked Sendable {
         lock.unlock()
     }
 
-    func tail() -> String? {
+    func snapshot() -> String? {
         lock.lock()
         let result = lines.isEmpty ? nil : lines.joined(separator: "\n")
         lock.unlock()
         return result
+    }
+
+    func clear() {
+        lock.lock()
+        lines.removeAll()
+        lock.unlock()
     }
 }

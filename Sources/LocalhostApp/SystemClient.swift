@@ -66,40 +66,73 @@ enum SystemClient {
         }
     }
 
-    // Find all node processes listening on TCP, mapped to their working directories.
+    // Find all $USER-owned processes listening on TCP, mapped to cwd + command line.
+    // Returns one entry per (pid, port). IPv4/IPv6 duplicates are collapsed.
     static func detectRunningServers() -> [DetectedServer] {
-        // Step 1: (pid -> port) for listening node processes
-        let listenLines = runCommand("/usr/sbin/lsof", ["-c", "node", "-iTCP", "-sTCP:LISTEN", "-nP"])
+        let user = NSUserName()
+
+        // Step 1: every $USER-owned listening TCP socket.
+        // -a is critical: lsof selection flags are OR'd by default, so without
+        // it this returns "all of $USER's open files" PLUS "all TCP listeners",
+        // flooding output and blowing past the runCommand timeout.
+        let listenLines = runCommand("/usr/sbin/lsof", ["-a", "-u", user, "-iTCP", "-sTCP:LISTEN", "-nP"])
             .components(separatedBy: "\n").dropFirst()
-        var pidPorts: [Int32: Int] = [:]
+        var pidPorts: [(pid: Int32, port: Int, shortCmd: String)] = []
+        var seen = Set<String>()
         for line in listenLines {
             let parts = line.split(separator: " ", omittingEmptySubsequences: true)
             guard parts.count >= 9, let pid = Int32(parts[1]) else { continue }
-            let name = String(parts[8])
-            if let port = name.split(separator: ":").last.flatMap({ Int($0) }) {
-                pidPorts[pid] = port
-            }
+            let shortCmd = String(parts[0])
+            let nameField = String(parts[8])
+            guard let port = nameField.split(separator: ":").last.flatMap({ Int($0) }) else { continue }
+            let key = "\(pid):\(port)"
+            if seen.contains(key) { continue }
+            seen.insert(key)
+            pidPorts.append((pid, port, shortCmd))
         }
         guard !pidPorts.isEmpty else { return [] }
 
-        // Step 2: (pid -> cwd) for those PIDs
-        let pidList = pidPorts.keys.map { "\($0)" }.joined(separator: ",")
+        let uniquePids = Set(pidPorts.map { $0.pid })
+        let pidList = uniquePids.map { "\($0)" }.joined(separator: ",")
+
+        // Step 2: cwd per pid
         let cwdLines = runCommand("/usr/sbin/lsof", ["-p", pidList, "-a", "-d", "cwd", "-Fn"])
             .components(separatedBy: "\n")
-
-        var results: [DetectedServer] = []
+        var cwds: [Int32: String] = [:]
         var currentPid: Int32 = 0
         for line in cwdLines {
             if line.hasPrefix("p"), let pid = Int32(line.dropFirst()) {
                 currentPid = pid
-            } else if line.hasPrefix("n"), currentPid != 0, let port = pidPorts[currentPid] {
+            } else if line.hasPrefix("n"), currentPid != 0 {
                 let dir = String(line.dropFirst())
-                if !dir.isEmpty {
-                    results.append(DetectedServer(pid: currentPid, port: port, directory: dir))
-                }
+                if !dir.isEmpty { cwds[currentPid] = dir }
             }
         }
-        return results
+
+        // Step 3: full command line per pid
+        let commands = fetchCommands(for: pidList)
+
+        return pidPorts.map { item in
+            DetectedServer(
+                pid: item.pid,
+                port: item.port,
+                directory: cwds[item.pid] ?? "",
+                command: commands[item.pid] ?? item.shortCmd
+            )
+        }
+    }
+
+    private static func fetchCommands(for pidList: String) -> [Int32: String] {
+        let output = runCommand("/bin/ps", ["-p", pidList, "-o", "pid=,command="])
+        var result: [Int32: String] = [:]
+        for raw in output.components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty else { continue }
+            let parts = line.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+            guard parts.count == 2, let pid = Int32(parts[0]) else { continue }
+            result[pid] = String(parts[1])
+        }
+        return result
     }
 
     static func killPort(_ port: Int) {
@@ -131,4 +164,5 @@ struct DetectedServer: Sendable {
     let pid: Int32
     let port: Int
     let directory: String
+    let command: String
 }

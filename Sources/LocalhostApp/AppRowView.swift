@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreImage
+import AppKit
 
 struct AppRowView: View {
     let app: DevApp
@@ -14,8 +15,17 @@ struct AppRowView: View {
     @State private var goAliasDraft = ""
     @FocusState private var goAliasFieldFocused: Bool
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
+    @AppStorage("showActionBrowser") private var showActionBrowser = true
+    @AppStorage("showActionCopy") private var showActionCopy = true
+    @AppStorage("showActionQR") private var showActionQR = true
+    @AppStorage("showActionTerminal") private var showActionTerminal = true
+    @AppStorage("showActionEditor") private var showActionEditor = true
+    @AppStorage("showActionFinder") private var showActionFinder = true
+    @AppStorage("showActionLogs") private var showActionLogs = true
+    @State private var showLogs = false
     @State private var isHovered = false
     @State private var showCrashLog = false
+    @State private var showPortsPopover = false
 
     private var takenPorts: Set<Int> {
         Set(model.apps.filter { $0.name != app.name }.map { $0.port })
@@ -37,6 +47,9 @@ struct AppRowView: View {
         .background(isHovered ? Color.primary.opacity(0.09) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .onHover { isHovered = $0 }
+        .sheet(isPresented: $showLogs) {
+            LogsSheet(app: app, model: model)
+        }
     }
 
     private var appName: some View {
@@ -44,16 +57,31 @@ struct AppRowView: View {
             Text(app.name)
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
-            if app.hasBackend { backendDot }
         }
         .frame(minWidth: goLinksEnabled ? 200 : 280, alignment: .leading)
     }
 
-    private var backendDot: some View {
-        Circle()
-            .fill(app.backendRunning ? Color.green : Color.secondary.opacity(0.35))
-            .frame(width: 6, height: 6)
-            .help(app.backendRunning ? "Backend (\(app.backendScriptName ?? "")) running" : "Backend (\(app.backendScriptName ?? "")) configured but not running")
+    private var hasMultiPortInfo: Bool {
+        !app.extraPorts.isEmpty || app.hasBackend
+    }
+
+    private var multiPortDotColor: Color {
+        if !app.extraPorts.isEmpty { return .green }
+        if app.hasBackend && app.backendRunning { return .green }
+        return .secondary.opacity(0.35)
+    }
+
+    private var multiPortDot: some View {
+        Button { showPortsPopover.toggle() } label: {
+            Circle()
+                .fill(multiPortDotColor)
+                .frame(width: 7, height: 7)
+        }
+        .buttonStyle(.plain)
+        .help("\(app.extraPorts.count + 1) port\(app.extraPorts.count == 0 ? "" : "s") — click to view")
+        .popover(isPresented: $showPortsPopover, arrowEdge: .bottom) {
+            MultiPortPopover(app: app)
+        }
     }
 
     private var goLinkBadge: some View {
@@ -143,15 +171,18 @@ struct AppRowView: View {
                     .foregroundStyle(.secondary)
                 }
             } else {
-                Text(verbatim: "\(app.detectedPort ?? app.port)")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
-                    .onTapGesture {
-                        guard !app.isRunning && app.portStatus != .detached else { return }
-                        portDraft = "\(app.port)"
-                        editingPort = true
-                    }
-                    .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
+                HStack(spacing: 5) {
+                    Text(verbatim: "\(app.detectedPort ?? app.port)")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(app.portStatus == .external ? Color.orange : .secondary)
+                        .onTapGesture {
+                            guard !app.isRunning && app.portStatus != .detached else { return }
+                            portDraft = "\(app.port)"
+                            editingPort = true
+                        }
+                        .help(app.isRunning || app.portStatus == .detached ? "Stop the server to change its port" : "Click to edit port")
+                    if hasMultiPortInfo { multiPortDot }
+                }
             }
         }
         .frame(width: 90, alignment: .leading)
@@ -201,58 +232,79 @@ struct AppRowView: View {
     private var actionButtons: some View {
         HStack(spacing: 8) {
             if isActive {
-                Button {
-                    SystemClient.openBrowser(port: activePort)
-                } label: {
-                    Image(systemName: "globe")
+                if showActionBrowser {
+                    Button {
+                        SystemClient.openBrowser(port: activePort)
+                    } label: {
+                        Image(systemName: "globe")
+                    }
+                    .help("Open in browser")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.blue)
                 }
-                .help("Open in browser")
-                .buttonStyle(.plain)
-                .foregroundStyle(.blue)
 
-                Button {
-                    SystemClient.copyNetworkURL(port: activePort)
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
-                } label: {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                if showActionCopy {
+                    Button {
+                        SystemClient.copyNetworkURL(port: activePort)
+                        copied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .help(copied ? "Copied!" : "Copy network URL (for other devices)")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(copied ? .green : .secondary)
+                    .animation(.easeInOut(duration: 0.2), value: copied)
                 }
-                .help(copied ? "Copied!" : "Copy network URL (for other devices)")
-                .buttonStyle(.plain)
-                .foregroundStyle(copied ? .green : .secondary)
-                .animation(.easeInOut(duration: 0.2), value: copied)
 
-                Button { showQR = true } label: {
-                    Image(systemName: "qrcode")
+                if showActionQR {
+                    Button { showQR = true } label: {
+                        Image(systemName: "qrcode")
+                    }
+                    .help("Show QR code to open on another device")
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .popover(isPresented: $showQR, arrowEdge: .bottom) {
+                        QRPopover(port: activePort)
+                    }
                 }
-                .help("Show QR code to open on another device")
+            }
+
+            if showActionLogs && app.isRunning {
+                Button { showLogs = true } label: {
+                    Image(systemName: "doc.text.magnifyingglass")
+                }
+                .help("View live logs")
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .popover(isPresented: $showQR, arrowEdge: .bottom) {
-                    QRPopover(port: activePort)
+            }
+
+            if showActionTerminal {
+                Button { model.openTerminal(for: app) } label: {
+                    Image(systemName: "terminal")
                 }
+                .help("Open in Terminal")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
 
-            Button { model.openTerminal(for: app) } label: {
-                Image(systemName: "terminal")
+            if showActionEditor {
+                Button { model.openEditor(for: app) } label: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                }
+                .help("Open in VS Code")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .help("Open in Terminal")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
 
-            Button { model.openEditor(for: app) } label: {
-                Image(systemName: "chevron.left.forwardslash.chevron.right")
+            if showActionFinder {
+                Button { model.openFinder(for: app) } label: {
+                    Image(systemName: "folder")
+                }
+                .help("Open in Finder")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
-            .help("Open in VS Code")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-
-            Button { model.openFinder(for: app) } label: {
-                Image(systemName: "folder")
-            }
-            .help("Open in Finder")
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
         }
     }
 
@@ -292,6 +344,246 @@ struct AppRowView: View {
             .disabled(app.portStatus == .external)
             .help(app.portStatus == .external ? "Port \(app.port) is in use — change the port first" : "Start server")
             .frame(width: 28)
+        }
+    }
+}
+
+struct LogsSheet: View {
+    let app: DevApp
+    @ObservedObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var logText: String = ""
+    @State private var search: String = ""
+    @State private var autoScroll: Bool = true
+    @State private var timer: Timer?
+
+    private var filteredLines: [(Int, String)] {
+        let allLines = logText.components(separatedBy: "\n")
+        if search.isEmpty {
+            return Array(allLines.enumerated())
+        }
+        return allLines.enumerated().filter { _, line in
+            line.range(of: search, options: .caseInsensitive) != nil
+        }
+    }
+
+    private var displayText: String {
+        if search.isEmpty {
+            return logText
+        }
+        return filteredLines.map(\.1).joined(separator: "\n")
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+            logBody
+            Divider()
+            footer
+        }
+        .frame(minWidth: 820, idealWidth: 1100, maxWidth: .infinity,
+               minHeight: 480, idealHeight: 680, maxHeight: .infinity)
+        .onAppear {
+            refresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                Task { @MainActor in refresh() }
+            }
+        }
+        .onDisappear {
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .foregroundStyle(.secondary)
+            Text(app.name)
+                .font(.headline)
+            Text("· logs")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("Filter", text: $search)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 240)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private var logBody: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                if displayText.isEmpty {
+                    Text(search.isEmpty ? "Waiting for output…" : "No matches.")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text(verbatim: displayText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .textSelection(.enabled)
+                    Color.clear.frame(height: 1).id("__bottom__")
+                }
+            }
+            .background(Color(nsColor: .textBackgroundColor))
+            .onChange(of: logText) { _, _ in
+                if autoScroll && search.isEmpty {
+                    proxy.scrollTo("__bottom__", anchor: .bottom)
+                }
+            }
+        }
+    }
+
+    private var footer: some View {
+        HStack(spacing: 14) {
+            let lineCount = logText.isEmpty ? 0 : logText.components(separatedBy: "\n").count
+            let matchCount = filteredLines.count
+            Text(search.isEmpty
+                 ? "\(lineCount) line\(lineCount == 1 ? "" : "s")"
+                 : "\(matchCount) of \(lineCount) match\(matchCount == 1 ? "" : "es")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Toggle(isOn: $autoScroll) {
+                Text("Auto-scroll").font(.caption)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .help("Auto-scroll to newest log line")
+
+            Divider().frame(height: 16)
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(logText, forType: .string)
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Copy all logs to clipboard")
+
+            Button {
+                model.clearLog(for: app)
+                refresh()
+            } label: {
+                Label("Clear", systemImage: "trash")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red.opacity(0.85))
+            .help("Clear log buffer")
+
+            Divider().frame(height: 16)
+
+            Button("Close") { dismiss() }
+                .keyboardShortcut(.cancelAction)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func refresh() {
+        logText = model.liveLog(for: app) ?? ""
+    }
+}
+
+struct MultiPortPopover: View {
+    let app: DevApp
+
+    private var primaryPort: Int { app.detectedPort ?? app.port }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("\(app.name) — bound ports")
+                .font(.headline)
+            Divider()
+
+            portRow(port: primaryPort, command: nil, isPrimary: true)
+
+            ForEach(app.extraPorts) { extra in
+                portRow(port: extra.port, command: extra.command, isPrimary: false)
+            }
+
+            if app.hasBackend {
+                Divider().padding(.vertical, 2)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(app.backendRunning ? Color.green : Color.secondary.opacity(0.35))
+                        .frame(width: 6, height: 6)
+                    Text("Backend script: \(app.backendScriptName ?? "")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(app.backendRunning ? "running" : "idle")
+                        .font(.caption)
+                        .foregroundStyle(app.backendRunning ? .green : .secondary)
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 380)
+    }
+
+    @ViewBuilder
+    private func portRow(port: Int, command: String?, isPrimary: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text(verbatim: "\(port)")
+                .font(.system(.body, design: .monospaced))
+                .fontWeight(isPrimary ? .semibold : .regular)
+                .frame(width: 56, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 1) {
+                if isPrimary {
+                    Text("primary")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else if let command, !command.isEmpty {
+                    Text(command)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                SystemClient.openBrowser(port: port)
+            } label: {
+                Image(systemName: "globe").font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+            .help("Open in browser")
+
+            Button {
+                SystemClient.copyNetworkURL(port: port)
+            } label: {
+                Image(systemName: "doc.on.doc").font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Copy network URL")
         }
     }
 }

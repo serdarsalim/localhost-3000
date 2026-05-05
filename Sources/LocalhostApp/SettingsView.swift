@@ -6,9 +6,17 @@ struct SettingsView: View {
     @AppStorage("menuBarQuickLaunch") private var menuBarQuickLaunch = false
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
     @AppStorage("goLinksSystemSetup") private var goLinksSystemSetup = false
+    @AppStorage("showActionBrowser") private var showActionBrowser = true
+    @AppStorage("showActionCopy") private var showActionCopy = true
+    @AppStorage("showActionQR") private var showActionQR = true
+    @AppStorage("showActionTerminal") private var showActionTerminal = true
+    @AppStorage("showActionEditor") private var showActionEditor = true
+    @AppStorage("showActionFinder") private var showActionFinder = true
+    @AppStorage("showActionLogs") private var showActionLogs = true
     @State private var launchAtStartup = false
     @State private var isSettingUp = false
     @State private var setupError: String?
+    @State private var showWhatsNew = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -20,14 +28,11 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 16) {
 
-                Toggle(isOn: $launchAtStartup) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Launch at startup")
-                        Text("Start Localhost automatically when you log in.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                settingRow(
+                    title: "Launch at startup",
+                    subtitle: "Start Localhost automatically when you log in.",
+                    binding: $launchAtStartup
+                )
                 .onChange(of: launchAtStartup) { _, enabled in
                     if enabled { try? SMAppService.mainApp.register() }
                     else { try? SMAppService.mainApp.unregister() }
@@ -35,26 +40,20 @@ struct SettingsView: View {
 
                 Divider()
 
-                Toggle(isOn: $menuBarQuickLaunch) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Menu bar quick launch")
-                        Text("Click the menu bar icon and your apps appear right there — start or stop any server without opening the app at all.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                settingRow(
+                    title: "Menu bar quick launch",
+                    subtitle: "Access your apps from the menu bar.",
+                    binding: $menuBarQuickLaunch
+                )
 
                 Divider()
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Toggle(isOn: $goLinksEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("go/ links")
-                            Text("Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.")
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+                    settingRow(
+                        title: "go/ links",
+                        subtitle: "Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.",
+                        binding: $goLinksEnabled
+                    )
                     .onChange(of: goLinksEnabled) { _, enabled in
                         model.setGoLinksEnabled(enabled)
                     }
@@ -91,21 +90,84 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Action buttons")
+                        .fontWeight(.medium)
+                    Text("Hide buttons you don't use to keep rows compact.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    actionToggle("Open in browser", systemImage: "globe", binding: $showActionBrowser)
+                    actionToggle("Copy network URL", systemImage: "doc.on.doc", binding: $showActionCopy)
+                    actionToggle("QR code", systemImage: "qrcode", binding: $showActionQR)
+                    actionToggle("View live logs", systemImage: "doc.text.magnifyingglass", binding: $showActionLogs)
+                    actionToggle("Open in Terminal", systemImage: "terminal", binding: $showActionTerminal)
+                    actionToggle("Open in VS Code", systemImage: "chevron.left.forwardslash.chevron.right", binding: $showActionEditor)
+                    actionToggle("Open in Finder", systemImage: "folder", binding: $showActionFinder)
+                }
             }
 
             Spacer()
 
             HStack {
+                Button {
+                    showWhatsNew = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("What's new")
+                    }
+                    .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
                 Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.return)
+                Button("Done") {
+                    NSApp.keyWindow?.close()
+                }
+                .keyboardShortcut(.return)
             }
             .padding(.top, 20)
         }
+        .sheet(isPresented: $showWhatsNew) { WhatsNewSheet() }
         .padding(28)
-        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 420 : 360)
+        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 660 : 600)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
+        }
+    }
+
+    private func settingRow(title: String, subtitle: String, binding: Binding<Bool>) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Toggle("", isOn: binding)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .labelsHidden()
+        }
+    }
+
+    private func actionToggle(_ label: String, systemImage: String, binding: Binding<Bool>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .frame(width: 18)
+                .foregroundStyle(.secondary)
+            Text(label)
+            Spacer()
+            Toggle("", isOn: binding)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
         }
     }
 
