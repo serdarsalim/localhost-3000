@@ -115,7 +115,7 @@ struct AppRowView: View {
                     .foregroundStyle(.secondary)
                 }
             } else {
-                Text("go/\(app.goAlias)")
+                Text(app.goAlias)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .onTapGesture {
