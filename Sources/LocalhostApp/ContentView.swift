@@ -414,7 +414,7 @@ struct OrphanRowView: View {
             Button {
                 if isOutsidePortfolio { showConfirm = true } else { model.stopOrphan(orphan) }
             } label: {
-                Image(systemName: "stop.fill").font(.system(size: 12))
+                Image(systemName: "stop.circle.fill").font(.system(size: 14))
             }
             .buttonStyle(.plain)
             .foregroundStyle(.red.opacity(0.8))

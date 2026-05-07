@@ -323,8 +323,8 @@ struct AppRowView: View {
         if app.isRunning || app.portStatus == .crashed || app.portStatus == .detached {
             HStack(spacing: 4) {
                 Button { model.stop(app: app) } label: {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 14))
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 16))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.red)
@@ -346,8 +346,8 @@ struct AppRowView: View {
             .frame(width: 28)
         } else {
             Button { model.start(app: app) } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 14))
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 16))
             }
             .buttonStyle(.plain)
             .foregroundStyle(app.portStatus == .external ? Color.secondary : Color.green)
