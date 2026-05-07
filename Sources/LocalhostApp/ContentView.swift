@@ -109,10 +109,9 @@ struct DashboardView: View {
 
     private var toolbar: some View {
         HStack(spacing: 8) {
-            Spacer()
-            ProgressView()
-                .scaleEffect(0.55)
-                .opacity(model.isLoading ? 1 : 0)
+            TextField("Search", text: $searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 180)
             Button { Task { await model.refresh() } } label: {
                 Image(systemName: "arrow.clockwise")
             }
@@ -120,9 +119,10 @@ struct DashboardView: View {
             .foregroundStyle(.secondary)
             .keyboardShortcut("r", modifiers: .command)
             .help("Refresh (⌘R)")
-            TextField("Search", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 180)
+            ProgressView()
+                .scaleEffect(0.55)
+                .opacity(model.isLoading ? 1 : 0)
+            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
