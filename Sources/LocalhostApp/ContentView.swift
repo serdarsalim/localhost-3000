@@ -53,6 +53,7 @@ struct ContentView: View {
                 WelcomeView(model: model)
             } else {
                 VStack(spacing: 0) {
+                    customHeader
                     TabBarView(store: terminalStore)
                     ZStack {
                         DashboardView(model: model, schemeRaw: $schemeRaw, searchText: $dashboardSearch)
@@ -66,23 +67,33 @@ struct ContentView: View {
                         }
                     }
                 }
-                .toolbar {
-                    ToolbarItem(placement: .navigation) {
-                        Text("OpenPort")
-                            .font(.headline)
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        SearchToolbarItem(
-                            placeholder: searchPlaceholder,
-                            text: searchBinding,
-                            session: activeSession
-                        )
-                    }
-                }
             }
         }
         .frame(minWidth: 880, minHeight: 480)
         .preferredColorScheme(preferredScheme)
+    }
+
+    private var customHeader: some View {
+        HStack {
+            Text("OpenPort")
+                .font(.headline)
+                .fontWeight(.bold)
+            Spacer()
+            SearchToolbarItem(
+                placeholder: searchPlaceholder,
+                text: searchBinding,
+                session: activeSession
+            )
+        }
+        // Top inset for traffic lights (~70pt clears them); horizontal padding flush with content.
+        .padding(.leading, 88)
+        .padding(.trailing, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(.bar)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
     }
 }
 
