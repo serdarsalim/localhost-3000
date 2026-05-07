@@ -124,7 +124,8 @@ struct DashboardView: View {
                 .opacity(model.isLoading ? 1 : 0)
             Spacer()
         }
-        .padding(.horizontal, 16)
+        .padding(.leading, 62)
+        .padding(.trailing, 16)
         .padding(.vertical, 10)
     }
 
