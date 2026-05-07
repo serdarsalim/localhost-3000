@@ -97,21 +97,25 @@ struct DashboardView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                TextField("Search", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 200)
+                Text("OpenPort")
+                    .font(.headline)
             }
-            ToolbarItem(placement: .navigation) {
+            ToolbarItem(placement: .primaryAction) {
+                ProgressView()
+                    .scaleEffect(0.55)
+                    .opacity(model.isLoading ? 1 : 0)
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button { Task { await model.refresh() } } label: {
                     Image(systemName: "arrow.clockwise")
                 }
                 .keyboardShortcut("r", modifiers: .command)
                 .help("Refresh (⌘R)")
             }
-            ToolbarItem(placement: .navigation) {
-                ProgressView()
-                    .scaleEffect(0.55)
-                    .opacity(model.isLoading ? 1 : 0)
+            ToolbarItem(placement: .primaryAction) {
+                TextField("Search", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 200)
             }
         }
         .task { await model.refresh() }
