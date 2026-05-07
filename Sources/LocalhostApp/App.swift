@@ -87,31 +87,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         if !model.apps.isEmpty {
-            let goLinksEnabled = UserDefaults.standard.bool(forKey: "goLinksEnabled")
             for app in model.apps {
                 let isActive = app.isRunning || app.portStatus == .detached
-                let indicator = isActive ? "■" : "▶"
-                let indicatorColor: NSColor = isActive ? .systemRed : .systemGreen
-                let suffix = goLinksEnabled ? "  go/\(app.goAlias)" : "  :\(app.detectedPort ?? app.port)"
-
-                let attributed = NSMutableAttributedString()
-                attributed.append(NSAttributedString(
-                    string: indicator,
-                    attributes: [
-                        .foregroundColor: indicatorColor,
-                        .strokeColor: NSColor.black.withAlphaComponent(0.35),
-                        .strokeWidth: -1.5
-                    ]
-                ))
-                attributed.append(NSAttributedString(
-                    string: "  \(app.name)\(suffix)",
-                    attributes: [.foregroundColor: NSColor.labelColor]
-                ))
-
-                let item = NSMenuItem(title: "", action: #selector(toggleApp(_:)), keyEquivalent: "")
-                item.attributedTitle = attributed
-                item.target = self
-                item.representedObject = app.name
+                let port = app.detectedPort ?? app.port
+                let appName = app.name
+                let item = NSMenuItem()
+                item.view = QuickLaunchMenuItemView(
+                    name: appName,
+                    port: port,
+                    isRunning: isActive,
+                    canOpenBrowser: isActive,
+                    onToggle: { [weak self] in
+                        guard let self,
+                              let target = self.model.apps.first(where: { $0.name == appName }) else { return }
+                        if target.isRunning { self.model.stop(app: target) }
+                        else { self.model.start(app: target) }
+                        self.rebuildMenu()
+                    },
+                    onOpenBrowser: {
+                        SystemClient.openBrowser(port: port)
+                    }
+                )
                 menu.addItem(item)
             }
             menu.addItem(.separator())
