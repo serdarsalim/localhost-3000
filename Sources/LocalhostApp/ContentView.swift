@@ -51,50 +51,63 @@ private struct TitleBarMounter: NSViewRepresentable {
     @Binding var dashboardSearch: String
 
     func makeNSView(context: Context) -> NSView {
-        let probe = NSView()
+        let probe = WindowTrackingView()
         let store = terminalStore
         let binding = $dashboardSearch
-        DispatchQueue.main.async { [weak probe] in
-            guard let window = probe?.window else { return }
-            install(into: window, store: store, dashboardSearch: binding)
+        probe.onWindowChange = { window in
+            guard let window else { return }
+            Self.install(into: window, store: store, dashboardSearch: binding)
         }
         return probe
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {}
 
-    @MainActor
-    private static let leadingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.leading")
-    @MainActor
-    private static let trailingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.trailing")
+    @MainActor private static let leadingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.leading")
+    @MainActor private static let trailingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.trailing")
 
     @MainActor
-    private func install(into window: NSWindow, store: TerminalSessionStore, dashboardSearch: Binding<String>) {
-        // Suppress the auto-rendered "OpenPort" centered title — our leading accessory is the title.
+    private static func install(into window: NSWindow, store: TerminalSessionStore, dashboardSearch: Binding<String>) {
         window.titleVisibility = .hidden
         let existing = Set(window.titlebarAccessoryViewControllers.compactMap(\.identifier))
-        if !existing.contains(Self.leadingID) {
-            let leading = NSTitlebarAccessoryViewController()
-            leading.identifier = Self.leadingID
-            leading.layoutAttribute = .leading
-            leading.view = NSHostingView(rootView:
+
+        if !existing.contains(leadingID) {
+            let host = NSHostingView(rootView:
                 Text("OpenPort")
                     .font(.headline)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
             )
+            host.frame = NSRect(x: 0, y: 0, width: 90, height: 28)
+            let leading = NSTitlebarAccessoryViewController()
+            leading.identifier = leadingID
+            leading.layoutAttribute = .leading
+            leading.view = host
             window.addTitlebarAccessoryViewController(leading)
         }
-        if !existing.contains(Self.trailingID) {
-            let trailing = NSTitlebarAccessoryViewController()
-            trailing.identifier = Self.trailingID
-            trailing.layoutAttribute = .trailing
-            trailing.view = NSHostingView(rootView:
+
+        if !existing.contains(trailingID) {
+            let host = NSHostingView(rootView:
                 TitleBarTrailing(terminalStore: store, dashboardSearch: dashboardSearch)
             )
+            host.frame = NSRect(x: 0, y: 0, width: 280, height: 32)
+            let trailing = NSTitlebarAccessoryViewController()
+            trailing.identifier = trailingID
+            trailing.layoutAttribute = .trailing
+            trailing.view = host
             window.addTitlebarAccessoryViewController(trailing)
         }
+    }
+}
+
+/// NSView subclass that fires a callback when it enters a window. More reliable than
+/// dispatching to main from makeNSView, which can run before the view is in the hierarchy.
+private final class WindowTrackingView: NSView {
+    var onWindowChange: ((NSWindow?) -> Void)?
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        onWindowChange?(window)
     }
 }
 
