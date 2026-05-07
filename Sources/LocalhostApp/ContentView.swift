@@ -101,9 +101,10 @@ struct SearchToolbarItem: View {
     let placeholder: String
     @Binding var text: String
     let session: TerminalSession?
+    @FocusState private var focused: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             if let session, !session.query.isEmpty {
                 Button {
                     session.terminalView.findPrevious(session.query)
@@ -125,9 +126,24 @@ struct SearchToolbarItem: View {
                 .foregroundStyle(.secondary)
                 .help("Next match")
             }
-            TextField(placeholder, text: $text)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 220)
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                TextField(placeholder, text: $text)
+                    .textFieldStyle(.plain)
+                    .focused($focused)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(0.07))
+            )
+            .frame(width: 240)
+            .contentShape(Rectangle())
+            .onTapGesture { focused = true }
         }
     }
 }
