@@ -170,8 +170,8 @@ private enum HelpContent {
         HelpSection("Getting started", symbol: "sparkles") {
             VStack(alignment: .leading, spacing: 14) {
                 helpText("OpenPort scans a folder of web projects and lets you start, stop, and inspect their dev servers without touching the terminal. Any project with a `dev` or `dev:frontend` script in its `package.json` shows up as a row.")
-                helpText("**First run:** click *Change Folder* in the footer (folder-with-gear icon) and pick the folder that contains your projects — for example `~/my-portfolio` if your apps live at `~/my-portfolio/foo`, `~/my-portfolio/bar`, etc. The choice persists.")
-                helpText("After that, hit Play on any row to start it, then the globe icon to open it in your browser.")
+                helpText("**First run:** open *Settings* (gear icon in the footer) and pick your **Portfolio folder** — for example `~/my-portfolio` if your apps live at `~/my-portfolio/foo`, `~/my-portfolio/bar`, etc. The choice persists.")
+                helpText("After that, hit Play on any row to start it, then the globe icon to open it in your browser. Need a shell in the project folder? Click the terminal icon on the row — it opens a tab right inside OpenPort.")
             }
         },
 
@@ -182,7 +182,7 @@ private enum HelpContent {
                 helpRow("Port", "Click when stopped to type a new port. Scroll the wheel over the field to nudge ±1. Orange = something else is on this port; clicking play offers a kill-and-retry prompt.")
                 helpRow("Multi-port dot", "Green dot next to the port appears when the app is bound to multiple ports OR has a backend script. Click to see every port and its full command.")
                 helpRow("Git", "Clean = no uncommitted changes. Orange count = how many uncommitted files.")
-                helpRow("Search", "The top-right search field filters the list as you type.")
+                helpRow("Search", "The title-bar search filters this list as you type. When you switch to a terminal tab, the same field becomes find-in-terminal — see the *Search* section.")
             }
         },
 
@@ -193,7 +193,7 @@ private enum HelpContent {
                 helpRow("Copy", "Copy the LAN URL (e.g. http://192.168.1.42:3001) for opening on phones / other devices on the same Wi-Fi. Running only.")
                 helpRow("QR code", "Popover with a QR for the LAN URL. Scan with your phone. Running only.")
                 helpRow("Logs (🔍)", "Opens a resizable modal with the app's stdout + stderr, updated every 500ms. Has search, auto-scroll, copy, and clear. Running only.")
-                helpRow("Terminal", "Open the project folder in Terminal.")
+                helpRow("Terminal", "Opens a new terminal *tab inside OpenPort*, cd'd into the project folder. Switch to macOS Terminal.app instead in Settings → Terminal → Use external Terminal.app.")
                 helpRow("VS Code", "Open the project in VS Code.")
                 helpRow("Finder", "Open the project in Finder.")
             }
@@ -228,24 +228,46 @@ private enum HelpContent {
             }
         },
 
+        HelpSection("Terminal tabs", symbol: "terminal") {
+            VStack(alignment: .leading, spacing: 12) {
+                helpText("OpenPort has built-in terminal tabs so you can run shell commands without leaving the app.")
+                helpText("**Open a tab** by clicking the terminal icon on any row (drops you in that project's folder) or the **+** in the tab bar (opens a fresh shell in `$HOME`).")
+                helpText("Each tab runs your login shell (`$SHELL`, defaults to `/bin/zsh`). Type `exit` or click the **✕** on the tab to close — closing kills the shell and any of its children.")
+                helpRow("Theme + font size", "Settings → Terminal → Terminal profile. Pick from System, Dark, Light, Solarized Dark/Light, Dracula, or Nord. Font size 10–20pt. Changes apply live to every open tab.")
+                helpRow("Search", "When a terminal tab is active, the title-bar search becomes find-in-terminal. ▲▼ buttons appear next to the field for jumping between matches.")
+                helpRow("Use Terminal.app instead", "Settings → Terminal → Use external Terminal.app. The row's terminal button reverts to launching macOS Terminal.app like before.")
+                helpText("**Why not run dev servers in tabs?** They already have a *Live logs* viewer (the magnifier-on-document icon). Running servers can't accept input anyway — the tab would be read-only with no advantage.")
+            }
+        },
+
+        HelpSection("Search", symbol: "magnifyingglass") {
+            VStack(alignment: .leading, spacing: 12) {
+                helpText("The search field on the right side of the title bar is **context-aware** — its meaning depends on which tab is active.")
+                helpRow("Dashboard tab", "*Find apps* — filters the row list as you type, by project name. Empty the field to show everything again.")
+                helpRow("Terminal tab", "*Find in terminal — <name>* — searches that tab's scrollback. Matches are highlighted; ▲▼ buttons next to the field jump between them.")
+                helpRow("Per-tab memory", "Each terminal remembers its own query, so flipping tabs auto-restores. The Dashboard's filter is its own state.")
+            }
+        },
+
         HelpSection("Footer", symbol: "rectangle.bottomthird.inset.filled") {
             VStack(alignment: .leading, spacing: 10) {
                 helpRow("Stop All", "Stops every dev server in the main list, including their multi-port siblings. Never touches the Other ports section.")
-                helpRow("Refresh (⌘R)", "Re-scans your folder, port detection, and git status.")
-                helpRow("Change Folder", "Pick a different portfolio root.")
-                helpRow("Help / Settings", "This window / preferences.")
+                helpRow("Refresh (⌘R)", "Re-scans your folder, port detection, and git status. The spinner next to it lights up while a scan is in flight.")
+                helpRow("Help (?)", "Opens this window.")
+                helpRow("Settings (⚙)", "Opens preferences. A blue dot on the gear means there's a new What's new entry waiting.")
                 helpRow("Sun / Moon", "Toggle light / dark theme.")
-                helpRow("What's new", "Shows a blue dot when there are app changes you haven't seen yet. Click to view; it disappears once dismissed. Always reachable from Settings → What's new or the menu bar.")
+                helpText("**Portfolio folder** moved to Settings → General. **What's new** is reachable from Settings only — bottom-left of any Settings tab.")
             }
         },
 
         HelpSection("Settings", symbol: "gearshape") {
-            VStack(alignment: .leading, spacing: 10) {
-                helpRow("Launch at startup", "Auto-launch OpenPort when you log in.")
-                helpRow("Menu bar quick launch", "Adds a network icon to the macOS menu bar with start/stop controls per app.")
-                helpRow("go/ links", "See its own help section.")
-                helpRow("Action buttons", "Toggle each of the row's icons (browser, copy, QR, logs, terminal, VS Code, Finder) on or off. Hide whatever you don't use.")
-                helpRow("What's new", "Re-open the changelog any time from the bottom of Settings.")
+            VStack(alignment: .leading, spacing: 12) {
+                helpText("Settings opens as a draggable, resizable window with a sidebar. Sections:")
+                helpRow("General", "Portfolio folder (with Change… button), Launch at startup, Menu bar quick launch.")
+                helpRow("go/ links", "Toggle the feature on, run the one-time system setup. See the *go/ links* help section.")
+                helpRow("Terminal", "Use external Terminal.app toggle. Terminal profile: theme picker (System / Dark / Light / Solarized Dark / Solarized Light / Dracula / Nord) and font size slider (10–20pt). Live-applies to all open terminal tabs.")
+                helpRow("Rows", "Per-icon visibility for the 7 row action buttons (browser, copy, QR, logs, terminal, VS Code, Finder).")
+                helpText("**What's new** lives in the bottom-left of Settings — re-open the changelog any time. The blue dot on the gear icon (in the main window footer) clears once you've viewed it.")
             }
         },
 
@@ -292,14 +314,16 @@ private enum HelpContent {
     }
 
     private static let searchIndex: [String: String] = [
-        "Getting started": "scans folder web projects start stop inspect dev servers package.json first run change folder portfolio root",
-        "Main list": "play stop dev server kills extra ports backend HMR debug app name go alias port click type new wheel nudge orange kill retry multi-port dot green backend script git clean uncommitted search filter",
-        "Action buttons": "globe browser localhost copy LAN URL network 192 wifi devices QR code popover scan phone logs magnifier stdout stderr 500ms search auto-scroll terminal VS Code Finder hide settings",
+        "Getting started": "scans folder web projects start stop inspect dev servers package.json first run portfolio folder settings terminal icon shell tab",
+        "Main list": "play stop dev server kills extra ports backend HMR debug app name go alias port click type new wheel nudge orange kill retry multi-port dot green backend script git clean uncommitted search filter context-aware terminal tab",
+        "Action buttons": "globe browser localhost copy LAN URL network 192 wifi devices QR code popover scan phone logs magnifier stdout stderr 500ms search auto-scroll terminal in-app tab VS Code Finder hide settings external",
         "Detected ports": "actually listening user TCP sockets working directory cwd refresh detached orange real process assigned saved multiple frontend backend Next Convex HMR inspector green dot",
         "Other ports in use": "section bottom dev server terminal cwd command stop SIGTERM PID confirmation dialog outside portfolio system processes filtered Tailscale ssh tunnels ControlCenter rapportd Continuity Mac apps Text Blaze MEGAsync OpenPort System usr Library Applications stop all never touches",
         "Live logs viewer": "magnifier document running modal stdout stderr stream search filter match count auto-scroll toggle copy clear buffer 1000 lines memory orphan detached pipes start inside",
-        "Footer": "stop all multi-port siblings refresh command R folder git status change folder help settings sun moon light dark theme what's new blue dot changelog menu bar",
-        "Settings": "launch startup auto menu bar quick launch network icon go links action buttons toggle browser copy QR logs terminal VS Code Finder what's new changelog",
+        "Terminal tabs": "shell tab in-app SwiftTerm zsh login plus button row terminal icon home directory project folder exit close kill children theme font size profile dark light solarized dracula nord live find scrollback external Terminal.app toggle settings",
+        "Search": "title bar context-aware dashboard find apps filter list project name terminal find scrollback highlight previous next match arrows per-tab memory query",
+        "Footer": "stop all multi-port siblings refresh command R spinner help settings gear sun moon light dark theme blue dot what's new portfolio folder moved",
+        "Settings": "sidebar general portfolio folder launch startup menu bar quick launch network icon go links terminal external use Terminal.app theme font size profile dark light solarized dracula nord rows action buttons toggle browser copy QR logs terminal VS Code Finder what's new changelog",
         "go/ links": "http alias browser open matching app badge one-time setup 127.0.0.1 hosts launchd port 80 forwarder password prompt disable proxy stops hosts manual remove",
         "Menu bar": "quick launch network icon list apps running state start stop show OpenPort what's new changelog quit command Q",
         "Network URL": "copy LAN 192 paste device same Wi-Fi remote preview can't connect hostname 0.0.0.0 dev script package.json Next localhost",

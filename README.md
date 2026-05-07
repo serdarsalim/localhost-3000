@@ -26,16 +26,20 @@ Point it at the folder that holds all your projects (`~/my-portfolio`, `~/code`,
 
 On top of that:
 
+- **In-app terminal tabs** — click the terminal icon on any row to open a real shell tab inside OpenPort, cd'd into that project. The `+` in the tab bar opens a fresh shell in `$HOME`. No more alt-tab dance to Terminal.app.
+- **Context-aware search** — the title-bar search filters apps when you're on the Dashboard and finds-in-scrollback when you're on a terminal tab, with ▲▼ to jump between matches. Per-tab query memory.
+- **Terminal profiles** — Settings → Terminal lets you pick a theme (System, Dark, Light, Solarized Dark/Light, Dracula, Nord) and font size. Applies live to every open terminal.
 - **Live port detection** — sees every dev server bound on your machine, not just the ones it started. If you started Vite in a terminal on a random port, it shows up on the right row with the actual port.
 - **Multi-port awareness** — apps that bind to multiple ports (frontend + backend, HMR, debug) show a green dot — click it for the full list with command lines.
 - **"Other ports in use"** — separate section at the bottom for dev servers running outside your portfolio. System processes (Tailscale, ssh tunnels, ControlCenter, Mac apps) are filtered out so you can't accidentally kill them.
 - **Live logs viewer** — resizable modal with stdout + stderr from any running app, search filter, auto-scroll, copy, clear. No more switching to a terminal to read the output.
+- **Reliable kill** — stops nuke the entire process tree (npm + next + convex + esbuild) instead of just the wrapper. Quitting OpenPort properly reaps its children. A startup orphan-reaper sweeps any zombies left over from previous sessions.
 - **Customizable rows** — hide any of the 7 action buttons (browser, copy, QR, logs, terminal, VS Code, Finder) per-row in Settings.
 - **go/ links** — type `http://go/myapp` in any browser to open a project, like internal tools at tech companies. Optional, one-time system setup.
 - **Git status** — see uncommitted changes for every project without opening a terminal.
 - **QR codes** — scan to open a running project on your phone over local Wi-Fi.
 - **Menu bar quick launch** — start or stop any server from the menu bar without opening the main window.
-- **What's new** — discreet blue dot when there are new app changes, hidden once seen.
+- **What's new** — discreet blue dot on the Settings gear when there are new app changes, hidden once seen.
 - **Works with Next.js, Vite, Nuxt, Express, Remix, Convex, and anything else that uses `npm run dev`**
 
 ---
@@ -63,11 +67,9 @@ open "dist/OpenPort.app"
 
 ## First time setup
 
-On first launch the app asks you to pick your **portfolio root folder** — the folder that contains all your projects.
+On first launch the app asks you to pick your **portfolio root folder** — the folder that contains all your projects. Example: if your projects live at `~/my-portfolio/cadencia`, `~/my-portfolio/yummii`, etc., pick `~/my-portfolio`. The app remembers this.
 
-Example: if your projects live at `~/my-portfolio/cadencia`, `~/my-portfolio/yummii`, etc., pick `~/my-portfolio`.
-
-The app remembers this. You only need to set it once.
+To change it later, open **Settings** (gear icon in the footer) → **General** → **Portfolio folder** → **Change…**.
 
 ---
 
@@ -95,7 +97,7 @@ Once your folder is selected, the app scans it and lists every project that has 
 | 📋 Clipboard | Copies the network URL (`192.168.x.x:PORT`) for other devices on the same Wi-Fi |
 | ⬛ QR | Shows a QR code — scan with your phone to open the project instantly |
 | 🔍 Logs | Opens a resizable live logs modal with stdout + stderr, search, auto-scroll, copy, clear |
-| `>_` Terminal | Opens the project folder in Terminal |
+| `>_` Terminal | Opens a new terminal tab inside OpenPort, cd'd into the project (toggle to use Terminal.app instead in Settings → Terminal) |
 | `</>` Code | Opens in VS Code |
 | 📁 Folder | Opens in Finder |
 
@@ -122,6 +124,22 @@ Each row shows the cwd, port, and full command. The stop button signals SIGTERM.
 **System processes are filtered out** so you can't accidentally kill them: Tailscale, ssh tunnels, ControlCenter, rapportd (Continuity), Mac apps, OpenPort itself, and anything in `/System`, `/usr`, `/Library`, `/Applications`.
 
 **Stop All never touches this section** — it only stops projects in the main list.
+
+---
+
+## Terminal tabs
+
+OpenPort has built-in terminal tabs so you can run shell commands without leaving the app.
+
+**Open a tab** by clicking the terminal icon on any row (drops you in that project's folder) or the **+** in the tab bar (opens a fresh shell in `$HOME`). Each tab runs your login shell (`$SHELL`, defaults to `/bin/zsh`). Type `exit` or click the **✕** on the tab to close — closing kills the shell and any of its children.
+
+**Theme + font size** in Settings → Terminal → *Terminal profile*. Pick from System, Dark, Light, Solarized Dark, Solarized Light, Dracula, or Nord. Font size 10–20pt. Changes apply live to every open tab.
+
+**Find in terminal.** When a terminal tab is active, the title-bar search becomes find-in-terminal — type to highlight matches in the scrollback, ▲▼ to jump.
+
+**Use Terminal.app instead.** Settings → Terminal → *Use external Terminal.app* reverts the row's terminal button to launching macOS Terminal.app like before.
+
+> Why not run dev servers in tabs? They already have a *Live logs* viewer (the magnifier-on-document icon). Running servers can't accept input anyway — the tab would be read-only with no advantage.
 
 ---
 
@@ -174,15 +192,16 @@ Example: project `SerdarSalim-Blog` gets `go/serdarsalim-blog` by default. Chang
 
 ## Settings
 
-Open Settings from the gear icon in the footer. Settings opens as a draggable, resizable window — keep it next to the main app.
+Open Settings from the gear icon in the footer. Settings opens as a draggable, resizable window with a sidebar.
 
-| Setting | What it does |
-|---------|-------------|
-| **Launch at startup** | Starts OpenPort automatically when you log in |
-| **Menu bar quick launch** | Adds a menu bar icon with your full app list — start/stop any server without opening the main window |
-| **go/ links** | Enables browser shortcuts and inline alias editing in the dashboard |
-| **Action buttons** | Per-button toggle to hide globe / copy / QR / logs / terminal / VS Code / Finder. Keep rows compact |
-| **What's new** | Re-open the changelog any time |
+| Section | Contains |
+|---------|---------|
+| **General** | Portfolio folder (with Change… button), Launch at startup, Menu bar quick launch |
+| **go/ links** | Toggle the feature on, run the one-time system setup |
+| **Terminal** | Use external Terminal.app toggle, theme picker (System / Dark / Light / Solarized Dark/Light / Dracula / Nord), font size slider (10–20pt) — applies live to all open tabs |
+| **Rows** | Per-icon visibility for the 7 row action buttons (browser, copy, QR, logs, terminal, VS Code, Finder) |
+
+**What's new** lives in the bottom-left of every Settings tab. The blue dot on the gear icon in the main window footer tells you when there's something unread.
 
 ---
 
@@ -217,11 +236,9 @@ The clipboard icon copies a URL like `http://192.168.1.42:3001`. Paste it into a
 | Button | What it does |
 |--------|-------------|
 | **Stop All** | Stops every running dev server in the main list (including their multi-port siblings). Never touches "Other ports in use" |
-| **↺ Refresh** | Re-scans your folder, port detection, and git status (⌘R) |
-| **Folder** | Pick a different portfolio root |
+| **↺ Refresh** | Re-scans your folder, port detection, and git status (⌘R). The spinner next to it lights up while a scan is in flight |
 | **?** | Help (separate draggable window) |
-| **⚙ Settings** | Settings (separate draggable window) |
-| **What's new** | Appears with a blue dot when there are unseen changes — disappears once viewed |
+| **⚙ Settings** | Settings (separate draggable window). A blue dot on the gear means there's a new What's new entry waiting |
 | **☀/🌙** | Toggle light / dark mode |
 
 ---

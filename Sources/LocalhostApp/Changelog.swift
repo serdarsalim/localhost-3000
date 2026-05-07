@@ -12,6 +12,20 @@ enum Changelog {
     /// Date format: yyyy-MM-dd.
     static let entries: [ChangelogEntry] = [
         ChangelogEntry(
+            version: "1.1.0",
+            date: "2026-05-07",
+            items: [
+                "In-app terminal tabs — click the terminal icon on any row (or the + in the tab bar) to open a real shell tab inside OpenPort, no more alt-tabbing to Terminal.app",
+                "Context-aware search — the title-bar search filters apps on the Dashboard and finds in scrollback when you're on a terminal tab; ▲▼ jump between matches; per-tab query memory",
+                "Terminal profiles — Settings → Terminal lets you pick a theme (System, Dark, Light, Solarized Dark/Light, Dracula, Nord) and font size; changes apply live to every open terminal",
+                "Orphan reaper — process group kills + recursive descendant reap fix the EADDRINUSE bug after restart; dead OpenPort sessions no longer leak convex/next/esbuild zombies for days",
+                "Settings reorganized — sidebar layout (General / go/ links / Terminal / Rows) instead of an ever-scrolling page; portfolio folder moved here from the footer",
+                "Custom title bar — bold OpenPort flush left, soft search pill flush right, traffic lights in the same strip; no more icon-and-name duplication",
+                "Footer cleanup — refresh + spinner now sit next to Stop All; help / settings / theme cluster on the right; the unseen-changelog blue dot now decorates the gear",
+                "Use external Terminal.app toggle — Settings → Terminal lets you keep launching the row's terminal button into macOS Terminal.app if you prefer the old behavior"
+            ]
+        ),
+        ChangelogEntry(
             version: "2026.05.05",
             date: "2026-05-05",
             items: [
