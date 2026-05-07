@@ -18,6 +18,7 @@ struct LocalhostApp: App {
         Window("Settings", id: "settings") {
             SettingsView()
                 .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.terminalStore)
         }
         .windowResizability(.contentSize)
 

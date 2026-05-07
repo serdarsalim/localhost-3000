@@ -20,9 +20,7 @@ struct ContentView: View {
                 WelcomeView(model: model)
             } else {
                 VStack(spacing: 0) {
-                    if !terminalStore.sessions.isEmpty {
-                        TabBarView(store: terminalStore)
-                    }
+                    TabBarView(store: terminalStore)
                     ZStack {
                         DashboardView(model: model, schemeRaw: $schemeRaw)
                             .opacity(terminalStore.selectedTab == .dashboard ? 1 : 0)

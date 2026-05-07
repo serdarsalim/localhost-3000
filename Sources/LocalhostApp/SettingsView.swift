@@ -14,6 +14,9 @@ struct SettingsView: View {
     @AppStorage("showActionFinder") private var showActionFinder = true
     @AppStorage("showActionLogs") private var showActionLogs = true
     @AppStorage("useExternalTerminal") private var useExternalTerminal = false
+    @AppStorage("terminalTheme") private var terminalTheme = TerminalThemeID.system.rawValue
+    @AppStorage("terminalFontSize") private var terminalFontSize: Double = 13
+    @EnvironmentObject private var terminalStore: TerminalSessionStore
     @State private var launchAtStartup = false
     @State private var isSettingUp = false
     @State private var setupError: String?
@@ -102,6 +105,48 @@ struct SettingsView: View {
 
                 Divider()
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Terminal profile")
+                        .fontWeight(.medium)
+                    Text("Theme and font size for in-app terminal tabs.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text("Theme")
+                            .frame(width: 90, alignment: .leading)
+                        Picker("", selection: $terminalTheme) {
+                            ForEach(TerminalThemeID.allCases) { theme in
+                                Text(theme.displayName).tag(theme.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .onChange(of: terminalTheme) { _, _ in
+                            terminalStore.applyAppearance()
+                        }
+                        Spacer()
+                    }
+
+                    HStack {
+                        Text("Font size")
+                            .frame(width: 90, alignment: .leading)
+                        Slider(value: $terminalFontSize, in: 10...20, step: 1) {
+                            EmptyView()
+                        }
+                        .frame(maxWidth: 220)
+                        .onChange(of: terminalFontSize) { _, _ in
+                            terminalStore.applyAppearance()
+                        }
+                        Text("\(Int(terminalFontSize)) pt")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                }
+
+                Divider()
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Action buttons")
                         .fontWeight(.medium)
@@ -143,7 +188,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showWhatsNew) { WhatsNewSheet() }
         .padding(28)
-        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 660 : 600)
+        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 800 : 740)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
         }

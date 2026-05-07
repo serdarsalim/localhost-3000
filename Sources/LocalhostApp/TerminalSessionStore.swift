@@ -29,6 +29,8 @@ final class TerminalSession: ObservableObject, Identifiable {
             if !trimmed.isEmpty { self.title = trimmed }
         }
 
+        TerminalAppearance.fromDefaults().apply(to: view)
+
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         var env = Terminal.getEnvironmentVariables(termName: "xterm-256color")
         env.append("PWD=\(cwd.path)")
@@ -100,6 +102,13 @@ final class TerminalSessionStore: ObservableObject {
 
     func select(_ id: UUID) {
         selectedTab = .session(id)
+    }
+
+    func applyAppearance() {
+        let appearance = TerminalAppearance.fromDefaults()
+        for session in sessions {
+            appearance.apply(to: session.terminalView)
+        }
     }
 
     private func handleProcessExit(_ id: UUID) {
