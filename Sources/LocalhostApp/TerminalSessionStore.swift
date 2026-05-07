@@ -7,6 +7,7 @@ import SwiftTerm
 final class TerminalSession: ObservableObject, Identifiable {
     let id = UUID()
     @Published var title: String
+    @Published var query: String = ""
     let cwd: URL
     let terminalView: LocalProcessTerminalView
     private let delegateProxy: ProcessDelegate

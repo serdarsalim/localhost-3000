@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
+import SwiftTerm
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var terminalStore: TerminalSessionStore
     @AppStorage("colorScheme") private var schemeRaw: String = "system"
+    @State private var dashboardSearch = ""
 
     private var preferredScheme: ColorScheme? {
         switch schemeRaw {
@@ -12,6 +14,37 @@ struct ContentView: View {
         case "dark":  return .dark
         default:      return nil
         }
+    }
+
+    private var activeSession: TerminalSession? {
+        if case .session(let id) = terminalStore.selectedTab {
+            return terminalStore.sessions.first { $0.id == id }
+        }
+        return nil
+    }
+
+    private var searchPlaceholder: String {
+        if let session = activeSession {
+            return "Find in terminal — \(session.title)"
+        }
+        return "Find apps"
+    }
+
+    private var searchBinding: Binding<String> {
+        if let session = activeSession {
+            return Binding(
+                get: { session.query },
+                set: { newValue in
+                    session.query = newValue
+                    if newValue.isEmpty {
+                        session.terminalView.clearSearch()
+                    } else {
+                        session.terminalView.findNext(newValue)
+                    }
+                }
+            )
+        }
+        return $dashboardSearch
     }
 
     var body: some View {
@@ -22,7 +55,7 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     TabBarView(store: terminalStore)
                     ZStack {
-                        DashboardView(model: model, schemeRaw: $schemeRaw)
+                        DashboardView(model: model, schemeRaw: $schemeRaw, searchText: $dashboardSearch)
                             .opacity(terminalStore.selectedTab == .dashboard ? 1 : 0)
                             .allowsHitTesting(terminalStore.selectedTab == .dashboard)
 
@@ -33,10 +66,58 @@ struct ContentView: View {
                         }
                     }
                 }
+                .toolbar {
+                    ToolbarItem(placement: .navigation) {
+                        Text("OpenPort")
+                            .font(.headline)
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        SearchToolbarItem(
+                            placeholder: searchPlaceholder,
+                            text: searchBinding,
+                            session: activeSession
+                        )
+                    }
+                }
             }
         }
         .frame(minWidth: 880, minHeight: 480)
         .preferredColorScheme(preferredScheme)
+    }
+}
+
+struct SearchToolbarItem: View {
+    let placeholder: String
+    @Binding var text: String
+    let session: TerminalSession?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let session, !session.query.isEmpty {
+                Button {
+                    session.terminalView.findPrevious(session.query)
+                } label: {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Previous match")
+
+                Button {
+                    session.terminalView.findNext(session.query)
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Next match")
+            }
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 220)
+        }
     }
 }
 
@@ -66,9 +147,9 @@ struct WelcomeView: View {
 struct DashboardView: View {
     @ObservedObject var model: AppModel
     @Binding var schemeRaw: String
+    @Binding var searchText: String
     @Environment(\.openWindow) private var openWindow
     @State private var showWhatsNew = false
-    @State private var searchText = ""
     @AppStorage("goLinksEnabled") private var goLinksEnabled = false
     @AppStorage("lastSeenChangelogVersion") private var lastSeenChangelogVersion = ""
 
@@ -95,29 +176,6 @@ struct DashboardView: View {
             Divider()
             footer
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Text("OpenPort")
-                    .font(.headline)
-            }
-            ToolbarItem(placement: .primaryAction) {
-                ProgressView()
-                    .scaleEffect(0.55)
-                    .opacity(model.isLoading ? 1 : 0)
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button { Task { await model.refresh() } } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .keyboardShortcut("r", modifiers: .command)
-                .help("Refresh (⌘R)")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                TextField("Search", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 200)
-            }
-        }
         .task { await model.refresh() }
         .sheet(isPresented: $showWhatsNew, onDismiss: {
             lastSeenChangelogVersion = Changelog.latestVersion
@@ -136,26 +194,31 @@ struct DashboardView: View {
 
             Divider().frame(height: 14).padding(.horizontal, 4)
 
-            footerIcon("questionmark.circle", help: "Help") { openWindow(id: "help") }
-            footerIcon("gearshape", help: "Settings") { openWindow(id: "settings") }
+            Button { Task { await model.refresh() } } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .keyboardShortcut("r", modifiers: .command)
+            .help("Refresh (⌘R)")
+
+            ProgressView()
+                .scaleEffect(0.55)
+                .opacity(model.isLoading ? 1 : 0)
 
             Spacer()
 
-            if hasUnseenChangelog {
-                Button {
-                    showWhatsNew = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("What's new")
-                            .font(.system(size: 11))
-                        Circle()
-                            .fill(Color.blue)
-                            .frame(width: 6, height: 6)
-                    }
+            footerIcon("questionmark.circle", help: "Help") { openWindow(id: "help") }
+
+            ZStack(alignment: .topTrailing) {
+                footerIcon("gearshape", help: "Settings") { openWindow(id: "settings") }
+                if hasUnseenChangelog {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 6, height: 6)
+                        .offset(x: 3, y: -2)
+                        .help("New since you last looked — open Settings to see What's new")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .help("New since you last looked")
             }
 
             footerIcon(schemeRaw == "dark" ? "moon.fill" : "sun.max.fill",

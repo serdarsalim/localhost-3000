@@ -14,6 +14,7 @@ struct LocalhostApp: App {
                 .environmentObject(appDelegate.terminalStore)
         }
         .windowResizability(.contentMinSize)
+        .windowToolbarStyle(.unified(showsTitle: false))
 
         Window("Settings", id: "settings") {
             SettingsView()
