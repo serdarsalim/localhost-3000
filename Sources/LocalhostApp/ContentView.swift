@@ -16,6 +16,94 @@ struct ContentView: View {
         }
     }
 
+    var body: some View {
+        Group {
+            if model.portfolioRoot == nil {
+                WelcomeView(model: model)
+            } else {
+                VStack(spacing: 0) {
+                    TabBarView(store: terminalStore)
+                    ZStack {
+                        DashboardView(model: model, schemeRaw: $schemeRaw, searchText: $dashboardSearch)
+                            .opacity(terminalStore.selectedTab == .dashboard ? 1 : 0)
+                            .allowsHitTesting(terminalStore.selectedTab == .dashboard)
+
+                        ForEach(terminalStore.sessions) { session in
+                            TerminalTabView(session: session)
+                                .opacity(terminalStore.selectedTab == .session(session.id) ? 1 : 0)
+                                .allowsHitTesting(terminalStore.selectedTab == .session(session.id))
+                        }
+                    }
+                }
+                .background(TitleBarMounter(terminalStore: terminalStore, dashboardSearch: $dashboardSearch))
+            }
+        }
+        .frame(minWidth: 880, minHeight: 480)
+        .preferredColorScheme(preferredScheme)
+    }
+}
+
+/// Mounts NSTitlebarAccessoryViewControllers (leading + trailing) into the actual macOS
+/// title bar so OpenPort's name and search field live alongside the traffic lights without
+/// the fullSizeContentView/ignoresSafeArea fragility that breaks during window drag.
+private struct TitleBarMounter: NSViewRepresentable {
+    @ObservedObject var terminalStore: TerminalSessionStore
+    @Binding var dashboardSearch: String
+
+    func makeNSView(context: Context) -> NSView {
+        let probe = NSView()
+        let store = terminalStore
+        let binding = $dashboardSearch
+        DispatchQueue.main.async { [weak probe] in
+            guard let window = probe?.window else { return }
+            install(into: window, store: store, dashboardSearch: binding)
+        }
+        return probe
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    @MainActor
+    private static let leadingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.leading")
+    @MainActor
+    private static let trailingID = NSUserInterfaceItemIdentifier("OpenPort.titleBar.trailing")
+
+    @MainActor
+    private func install(into window: NSWindow, store: TerminalSessionStore, dashboardSearch: Binding<String>) {
+        // Suppress the auto-rendered "OpenPort" centered title — our leading accessory is the title.
+        window.titleVisibility = .hidden
+        let existing = Set(window.titlebarAccessoryViewControllers.compactMap(\.identifier))
+        if !existing.contains(Self.leadingID) {
+            let leading = NSTitlebarAccessoryViewController()
+            leading.identifier = Self.leadingID
+            leading.layoutAttribute = .leading
+            leading.view = NSHostingView(rootView:
+                Text("OpenPort")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+            )
+            window.addTitlebarAccessoryViewController(leading)
+        }
+        if !existing.contains(Self.trailingID) {
+            let trailing = NSTitlebarAccessoryViewController()
+            trailing.identifier = Self.trailingID
+            trailing.layoutAttribute = .trailing
+            trailing.view = NSHostingView(rootView:
+                TitleBarTrailing(terminalStore: store, dashboardSearch: dashboardSearch)
+            )
+            window.addTitlebarAccessoryViewController(trailing)
+        }
+    }
+}
+
+/// Reactive trailing accessory: rebuilds the search binding/placeholder/active-session as
+/// terminalStore changes. Hosted via NSHostingView so the SwiftUI tree stays alive.
+private struct TitleBarTrailing: View {
+    @ObservedObject var terminalStore: TerminalSessionStore
+    @Binding var dashboardSearch: String
+
     private var activeSession: TerminalSession? {
         if case .session(let id) = terminalStore.selectedTab {
             return terminalStore.sessions.first { $0.id == id }
@@ -48,71 +136,14 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if model.portfolioRoot == nil {
-                WelcomeView(model: model)
-            } else {
-                VStack(spacing: 0) {
-                    customHeader
-                    TabBarView(store: terminalStore)
-                    ZStack {
-                        DashboardView(model: model, schemeRaw: $schemeRaw, searchText: $dashboardSearch)
-                            .opacity(terminalStore.selectedTab == .dashboard ? 1 : 0)
-                            .allowsHitTesting(terminalStore.selectedTab == .dashboard)
-
-                        ForEach(terminalStore.sessions) { session in
-                            TerminalTabView(session: session)
-                                .opacity(terminalStore.selectedTab == .session(session.id) ? 1 : 0)
-                                .allowsHitTesting(terminalStore.selectedTab == .session(session.id))
-                        }
-                    }
-                }
-                .ignoresSafeArea(.container, edges: .top)
-                .background(TransparentTitleBar())
-            }
-        }
-        .frame(minWidth: 880, minHeight: 480)
-        .preferredColorScheme(preferredScheme)
+        SearchToolbarItem(
+            placeholder: searchPlaceholder,
+            text: searchBinding,
+            session: activeSession
+        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
     }
-
-    private var customHeader: some View {
-        HStack {
-            Text("OpenPort")
-                .font(.headline)
-                .fontWeight(.bold)
-            Spacer()
-            SearchToolbarItem(
-                placeholder: searchPlaceholder,
-                text: searchBinding,
-                session: activeSession
-            )
-        }
-        // Leading inset clears the traffic lights; vertical padding centers content within
-        // the title bar band so this row sits in the same strip as the close/min/max buttons.
-        .padding(.leading, 88)
-        .padding(.trailing, 16)
-        .padding(.vertical, 6)
-        .background(.bar)
-        .overlay(alignment: .bottom) {
-            Divider()
-        }
-    }
-}
-
-/// Reaches up to the SwiftUI window and turns the macOS title bar transparent so our
-/// custom header can occupy the same row as the traffic lights.
-private struct TransparentTitleBar: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            guard let window = view.window else { return }
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.styleMask.insert(.fullSizeContentView)
-        }
-        return view
-    }
-    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 struct SearchToolbarItem: View {
