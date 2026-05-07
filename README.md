@@ -2,7 +2,7 @@
 
 **Free, open source macOS app.** Point it at your projects folder and get a one-click dashboard for all your dev servers — no terminal, no account, no subscription.
 
-![OpenPort dashboard](openportnew.webp)
+![OpenPort dashboard](screenshot-dashboard.png)
 
 ---
 
@@ -213,7 +213,9 @@ The Help window (? icon in the footer) is its own draggable window with a sideba
 
 ## Menu bar quick launch
 
-When enabled in Settings, a network icon appears in your menu bar. Click it to see all your projects with colored indicators (green = can start, red = running) and start or stop any of them directly from the menu. The dropdown also has **Show OpenPort**, **What's new**, and **Quit**.
+![Menu bar quick launch](screenshot-menu.png)
+
+When enabled in Settings, a network icon appears in your menu bar. Click it for the full app list — each row shows the project name, port, and a globe button to open it in your browser when running. Click anywhere on a row (except the globe) to start or stop. The dropdown also has **Show OpenPort**, **What's new**, and **Quit**.
 
 ---
 
