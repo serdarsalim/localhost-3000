@@ -16,11 +16,13 @@ struct SettingsView: View {
     @AppStorage("useExternalTerminal") private var useExternalTerminal = false
     @AppStorage("terminalTheme") private var terminalTheme = TerminalThemeID.system.rawValue
     @AppStorage("terminalFontSize") private var terminalFontSize: Double = 13
+    @AppStorage("lastSeenChangelogVersion") private var lastSeenChangelogVersion = ""
     @EnvironmentObject private var terminalStore: TerminalSessionStore
     @State private var launchAtStartup = false
     @State private var isSettingUp = false
     @State private var setupError: String?
     @State private var showWhatsNew = false
+    @State private var whatsNewHovered = false
     @State private var selectedSection: SettingsSection = .general
     @Environment(\.dismiss) private var dismiss
 
@@ -55,7 +57,9 @@ struct SettingsView: View {
             Divider()
             footer
         }
-        .sheet(isPresented: $showWhatsNew) { WhatsNewSheet() }
+        .sheet(isPresented: $showWhatsNew, onDismiss: {
+            lastSeenChangelogVersion = Changelog.latestVersion
+        }) { WhatsNewSheet() }
         .frame(minWidth: 700, idealWidth: 760, minHeight: 460, idealHeight: 520)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
@@ -113,9 +117,17 @@ struct SettingsView: View {
                     Text("What's new")
                 }
                 .font(.system(size: 12))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.primary.opacity(whatsNewHovered ? 0.10 : 0))
+                )
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+            .onHover { whatsNewHovered = $0 }
             Spacer()
             Button("Done") {
                 NSApp.keyWindow?.close()
