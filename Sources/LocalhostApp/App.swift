@@ -41,6 +41,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         setupMenuBarIcon()
 
+        // Reap leftover processes from a previous OpenPort session that quit without cleanup.
+        model.reapPortfolioOrphans()
+
         model.$apps
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.rebuildMenu() }
@@ -55,6 +58,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Synchronous SIGTERM → 500ms → SIGKILL on every spawned PID. Without this, children
+        // get reparented to launchd (PPID=1) and outlive every future OpenPort launch invisibly.
+        model.nukeAllSync()
     }
 
     private func setupMenuBarIcon() {

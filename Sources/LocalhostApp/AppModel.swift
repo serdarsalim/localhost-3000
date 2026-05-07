@@ -189,7 +189,7 @@ final class AppModel: ObservableObject {
     /// Kill an orphan listener by PID. Scoped narrowly — does NOT participate
     /// in stopAll(), since orphans may be unrelated apps the user cares about.
     func stopOrphan(_ orphan: OrphanPort) {
-        kill(orphan.pid, SIGTERM)
+        SystemClient.killTree(pid: orphan.pid)
         orphans.removeAll { $0.id == orphan.id }
     }
 
@@ -223,14 +223,14 @@ final class AppModel: ObservableObject {
         if app.isRunning {
             processManager.stop(name: app.name)
         } else if let pid = app.externalPID {
-            kill(pid, SIGTERM)
+            SystemClient.killTree(pid: pid)
         }
         let port = app.detectedPort ?? app.port
         let extraPids = app.extraPorts.map(\.pid)
         update(app.name) { $0.isRunning = false; $0.portStatus = .free; $0.detectedPort = nil; $0.externalPID = nil; $0.backendRunning = false; $0.crashLog = nil; $0.extraPorts = [] }
         refreshProxyRoutes()
         Task.detached {
-            for pid in extraPids { kill(pid, SIGTERM) }
+            for pid in extraPids { SystemClient.killTree(pid: pid) }
             SystemClient.killPort(port)
         }
     }
@@ -254,9 +254,31 @@ final class AppModel: ObservableObject {
         refreshProxyRoutes()
 
         Task.detached {
-            for pid in externalPIDs { kill(pid, SIGTERM) }
-            for pid in extraPIDs { kill(pid, SIGTERM) }
+            for pid in externalPIDs { SystemClient.killTree(pid: pid) }
+            for pid in extraPIDs { SystemClient.killTree(pid: pid) }
             for port in portsToKill { SystemClient.killPort(port) }
+        }
+    }
+
+    /// Synchronous shutdown. Blocks ~500ms so children die before OpenPort exits, otherwise
+    /// they reparent to launchd and outlive every future OpenPort launch invisibly.
+    func nukeAllSync() {
+        processManager.nukeAllSync()
+        let pids = apps.compactMap { $0.externalPID } + apps.flatMap { $0.extraPorts.map(\.pid) }
+        for pid in pids { kill(pid, SIGTERM) }
+        usleep(300_000)
+        for pid in pids { kill(pid, SIGKILL) }
+    }
+
+    /// Reap leftover processes from a previous (crashed/quit-without-cleanup) OpenPort session.
+    /// Targets only orphans (PPID==1) whose cwd is under the portfolio root, so we can't hit
+    /// random user processes.
+    func reapPortfolioOrphans() {
+        guard let root = portfolioRoot?.path else { return }
+        Task.detached {
+            let orphans = SystemClient.findOrphans(under: root)
+            guard !orphans.isEmpty else { return }
+            for pid in orphans { SystemClient.killTree(pid: pid) }
         }
     }
 

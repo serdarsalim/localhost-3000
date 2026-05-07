@@ -140,9 +140,89 @@ enum SystemClient {
         for pidStr in output.components(separatedBy: .newlines) {
             let trimmed = pidStr.trimmingCharacters(in: .whitespaces)
             if let pid = Int32(trimmed), pid > 0 {
-                kill(pid, SIGTERM)
+                killTree(pid: pid)
             }
         }
+    }
+
+    /// Recursively walks `pgrep -P` to collect every descendant PID.
+    static func descendantPIDs(of pid: Int32) -> [Int32] {
+        var result: Set<Int32> = []
+        var queue: [Int32] = [pid]
+        while let current = queue.popLast() {
+            let out = runCommand("/usr/bin/pgrep", ["-P", "\(current)"], timeout: 2)
+            for line in out.components(separatedBy: .newlines) {
+                let t = line.trimmingCharacters(in: .whitespaces)
+                if let child = Int32(t), child > 0, !result.contains(child) {
+                    result.insert(child)
+                    queue.append(child)
+                }
+            }
+        }
+        return Array(result)
+    }
+
+    /// SIGTERM the leader's process group + every descendant; SIGKILL fallback after 2s.
+    /// Walks descendants so backend processes that don't bind a port (convex, esbuild) get reaped.
+    static func killTree(pid: Int32) {
+        guard pid > 0, pid != getpid() else { return }
+        let descendants = descendantPIDs(of: pid)
+        kill(-pid, SIGTERM)
+        kill(pid, SIGTERM)
+        for child in descendants { kill(child, SIGTERM) }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+            kill(-pid, SIGKILL)
+            kill(pid, SIGKILL)
+            for child in descendants { kill(child, SIGKILL) }
+        }
+    }
+
+    /// Synchronous SIGTERM → 500ms wait → SIGKILL. For app shutdown where we can't rely on
+    /// async dispatch firing before exit.
+    static func killTreeSync(pid: Int32) {
+        guard pid > 0, pid != getpid() else { return }
+        let descendants = descendantPIDs(of: pid)
+        kill(-pid, SIGTERM)
+        kill(pid, SIGTERM)
+        for child in descendants { kill(child, SIGTERM) }
+        usleep(500_000)
+        kill(-pid, SIGKILL)
+        kill(pid, SIGKILL)
+        for child in descendants { kill(child, SIGKILL) }
+    }
+
+    /// Find orphaned processes (PPID == 1) whose working directory sits under `root`.
+    /// These survive across OpenPort restarts and are invisible to port-based cleanup.
+    static func findOrphans(under root: String) -> [Int32] {
+        let normalizedRoot = root.hasSuffix("/") ? root : root + "/"
+        // Step 1: every process's cwd via lsof (one call, scans all PIDs).
+        let lsofOut = runCommand("/usr/sbin/lsof", ["-d", "cwd", "-Fpn"], timeout: 10)
+        var inRoot: [Int32] = []
+        var currentPid: Int32 = 0
+        for line in lsofOut.components(separatedBy: "\n") {
+            if line.hasPrefix("p"), let pid = Int32(line.dropFirst()) {
+                currentPid = pid
+            } else if line.hasPrefix("n"), currentPid != 0 {
+                let dir = String(line.dropFirst())
+                if dir == root || dir.hasPrefix(normalizedRoot) {
+                    inRoot.append(currentPid)
+                }
+            }
+        }
+        guard !inRoot.isEmpty else { return [] }
+        // Step 2: filter to those reparented to launchd (PPID=1).
+        let pidList = inRoot.map(String.init).joined(separator: ",")
+        let psOut = runCommand("/bin/ps", ["-p", pidList, "-o", "pid=,ppid="])
+        var orphans: [Int32] = []
+        let me = getpid()
+        for raw in psOut.components(separatedBy: "\n") {
+            let parts = raw.split(separator: " ", omittingEmptySubsequences: true)
+            guard parts.count >= 2,
+                  let pid = Int32(parts[0]),
+                  let ppid = Int32(parts[1]) else { continue }
+            if ppid == 1, pid != me { orphans.append(pid) }
+        }
+        return orphans
     }
 
     private static func runCommand(_ path: String, _ args: [String], timeout: TimeInterval = 4) -> String {

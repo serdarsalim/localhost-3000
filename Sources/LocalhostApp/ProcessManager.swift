@@ -77,22 +77,42 @@ final class ProcessManager {
     func stop(name: String) {
         stopping.insert(name)
         crashLogs.removeValue(forKey: name)
-        running[name]?.terminate()
+        if let proc = running[name] { SystemClient.killTree(pid: proc.processIdentifier) }
         running.removeValue(forKey: name)
         logBuffers.removeValue(forKey: name)
         if let backend = backends.removeValue(forKey: name), backend.isRunning {
-            backend.terminate()
+            SystemClient.killTree(pid: backend.processIdentifier)
         }
     }
 
     func stopAll() {
         for name in running.keys { stopping.insert(name) }
-        for process in running.values { process.terminate() }
-        for process in backends.values where process.isRunning { process.terminate() }
+        for process in running.values where process.isRunning {
+            SystemClient.killTree(pid: process.processIdentifier)
+        }
+        for process in backends.values where process.isRunning {
+            SystemClient.killTree(pid: process.processIdentifier)
+        }
         running.removeAll()
         backends.removeAll()
         logBuffers.removeAll()
         crashLogs.removeAll()
+    }
+
+    /// Synchronous nuke for app shutdown. SIGTERM → 500ms wait → SIGKILL, blocking briefly so
+    /// children actually die before we exit (otherwise they reparent to launchd as orphans).
+    func nukeAllSync() {
+        let pids = (running.values.map(\.processIdentifier) + backends.values.map(\.processIdentifier))
+            .filter { $0 > 0 }
+        for pid in pids {
+            kill(-pid, SIGTERM)
+            kill(pid, SIGTERM)
+        }
+        usleep(500_000)
+        for pid in pids {
+            kill(-pid, SIGKILL)
+            kill(pid, SIGKILL)
+        }
     }
 
     func isRunning(name: String) -> Bool {
