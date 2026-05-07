@@ -44,7 +44,11 @@ final class QuickLaunchMenuItemView: NSView {
         let symbolName = isRunning ? "stop.circle.fill" : "play.circle.fill"
         iconView.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
             .withSymbolConfiguration(iconCfg)
-        iconView.contentTintColor = isRunning ? .systemRed : .systemGreen
+        // Darker green than systemGreen — the default washes out against the
+        // menu's translucent background. systemRed already reads well as-is.
+        let runningColor = NSColor.systemRed
+        let readyColor = NSColor(srgbRed: 0.13, green: 0.60, blue: 0.22, alpha: 1.0)
+        iconView.contentTintColor = isRunning ? runningColor : readyColor
         iconView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(iconView)
 
