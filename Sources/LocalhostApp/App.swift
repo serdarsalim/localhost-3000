@@ -41,16 +41,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         setupMenuBarIcon()
 
-        // Make the macOS title bar transparent so we can render our own header inside the
-        // window. Traffic lights stay, but we get full control of left/right alignment.
-        DispatchQueue.main.async {
-            for window in NSApp.windows where window.identifier?.rawValue.hasPrefix("OpenPort") == true || window.title == "OpenPort" {
-                window.titlebarAppearsTransparent = true
-                window.titleVisibility = .hidden
-                window.styleMask.insert(.fullSizeContentView)
-            }
-        }
-
         // Reap leftover processes from a previous OpenPort session that quit without cleanup.
         model.reapPortfolioOrphans()
 

@@ -67,6 +67,8 @@ struct ContentView: View {
                         }
                     }
                 }
+                .ignoresSafeArea(.container, edges: .top)
+                .background(TransparentTitleBar())
             }
         }
         .frame(minWidth: 880, minHeight: 480)
@@ -85,16 +87,32 @@ struct ContentView: View {
                 session: activeSession
             )
         }
-        // Top inset for traffic lights (~70pt clears them); horizontal padding flush with content.
+        // Leading inset clears the traffic lights; vertical padding centers content within
+        // the title bar band so this row sits in the same strip as the close/min/max buttons.
         .padding(.leading, 88)
         .padding(.trailing, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.vertical, 6)
         .background(.bar)
         .overlay(alignment: .bottom) {
             Divider()
         }
     }
+}
+
+/// Reaches up to the SwiftUI window and turns the macOS title bar transparent so our
+/// custom header can occupy the same row as the traffic lights.
+private struct TransparentTitleBar: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            guard let window = view.window else { return }
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.styleMask.insert(.fullSizeContentView)
+        }
+        return view
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 struct SearchToolbarItem: View {
