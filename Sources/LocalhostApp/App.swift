@@ -11,6 +11,7 @@ struct LocalhostApp: App {
         WindowGroup("OpenPort") {
             ContentView()
                 .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.terminalStore)
         }
         .windowResizability(.contentMinSize)
 
@@ -30,6 +31,7 @@ struct LocalhostApp: App {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
+    let terminalStore = TerminalSessionStore()
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
 

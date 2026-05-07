@@ -3,6 +3,7 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var terminalStore: TerminalSessionStore
     @AppStorage("colorScheme") private var schemeRaw: String = "system"
 
     private var preferredScheme: ColorScheme? {
@@ -18,7 +19,22 @@ struct ContentView: View {
             if model.portfolioRoot == nil {
                 WelcomeView(model: model)
             } else {
-                DashboardView(model: model, schemeRaw: $schemeRaw)
+                VStack(spacing: 0) {
+                    if !terminalStore.sessions.isEmpty {
+                        TabBarView(store: terminalStore)
+                    }
+                    ZStack {
+                        DashboardView(model: model, schemeRaw: $schemeRaw)
+                            .opacity(terminalStore.selectedTab == .dashboard ? 1 : 0)
+                            .allowsHitTesting(terminalStore.selectedTab == .dashboard)
+
+                        ForEach(terminalStore.sessions) { session in
+                            TerminalTabView(session: session)
+                                .opacity(terminalStore.selectedTab == .session(session.id) ? 1 : 0)
+                                .allowsHitTesting(terminalStore.selectedTab == .session(session.id))
+                        }
+                    }
+                }
             }
         }
         .frame(minWidth: 880, minHeight: 480)

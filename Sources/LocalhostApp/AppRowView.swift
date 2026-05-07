@@ -22,6 +22,8 @@ struct AppRowView: View {
     @AppStorage("showActionEditor") private var showActionEditor = true
     @AppStorage("showActionFinder") private var showActionFinder = true
     @AppStorage("showActionLogs") private var showActionLogs = true
+    @AppStorage("useExternalTerminal") private var useExternalTerminal = false
+    @EnvironmentObject private var terminalStore: TerminalSessionStore
     @State private var showLogs = false
     @State private var isHovered = false
     @State private var showCrashLog = false
@@ -129,6 +131,14 @@ struct AppRowView: View {
     private func saveGoAlias() {
         model.updateGoAlias(for: app, alias: goAliasDraft)
         editingGoAlias = false
+    }
+
+    private func openTerminalForApp() {
+        if useExternalTerminal {
+            model.openTerminal(for: app)
+        } else if let root = model.portfolioRoot {
+            terminalStore.openSession(title: app.name, cwd: root.appendingPathComponent(app.name))
+        }
     }
 
     private var portBadge: some View {
@@ -280,10 +290,10 @@ struct AppRowView: View {
             }
 
             if showActionTerminal {
-                Button { model.openTerminal(for: app) } label: {
+                Button { openTerminalForApp() } label: {
                     Image(systemName: "terminal")
                 }
-                .help("Open in Terminal")
+                .help(useExternalTerminal ? "Open in Terminal.app" : "Open terminal tab here")
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
             }

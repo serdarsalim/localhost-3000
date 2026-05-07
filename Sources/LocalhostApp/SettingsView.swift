@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("showActionEditor") private var showActionEditor = true
     @AppStorage("showActionFinder") private var showActionFinder = true
     @AppStorage("showActionLogs") private var showActionLogs = true
+    @AppStorage("useExternalTerminal") private var useExternalTerminal = false
     @State private var launchAtStartup = false
     @State private var isSettingUp = false
     @State private var setupError: String?
@@ -90,6 +91,14 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                Divider()
+
+                settingRow(
+                    title: "Use external Terminal.app",
+                    subtitle: "Open the terminal button in macOS Terminal.app instead of a tab inside OpenPort.",
+                    binding: $useExternalTerminal
+                )
 
                 Divider()
 
