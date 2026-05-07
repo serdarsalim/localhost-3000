@@ -83,7 +83,6 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            toolbar
             if model.apps.isEmpty && !model.isLoading {
                 ContentUnavailableView(
                     "No apps found",
@@ -96,6 +95,25 @@ struct DashboardView: View {
             Divider()
             footer
         }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                TextField("Search", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 200)
+            }
+            ToolbarItem(placement: .navigation) {
+                Button { Task { await model.refresh() } } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .keyboardShortcut("r", modifiers: .command)
+                .help("Refresh (⌘R)")
+            }
+            ToolbarItem(placement: .navigation) {
+                ProgressView()
+                    .scaleEffect(0.55)
+                    .opacity(model.isLoading ? 1 : 0)
+            }
+        }
         .task { await model.refresh() }
         .sheet(isPresented: $showWhatsNew, onDismiss: {
             lastSeenChangelogVersion = Changelog.latestVersion
@@ -105,28 +123,6 @@ struct DashboardView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openPortShowWhatsNew)) { _ in
             showWhatsNew = true
         }
-    }
-
-    private var toolbar: some View {
-        HStack(spacing: 8) {
-            TextField("Search", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 180)
-            Button { Task { await model.refresh() } } label: {
-                Image(systemName: "arrow.clockwise")
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .keyboardShortcut("r", modifiers: .command)
-            .help("Refresh (⌘R)")
-            ProgressView()
-                .scaleEffect(0.55)
-                .opacity(model.isLoading ? 1 : 0)
-            Spacer()
-        }
-        .padding(.leading, 62)
-        .padding(.trailing, 16)
-        .padding(.vertical, 10)
     }
 
     private var footer: some View {
