@@ -24,151 +24,23 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Settings")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.bottom, 20)
+        VStack(spacing: 0) {
+            TabView {
+                generalTab
+                    .tabItem { Label("General", systemImage: "gearshape") }
 
-            VStack(alignment: .leading, spacing: 16) {
+                goLinksTab
+                    .tabItem { Label("go/ links", systemImage: "link") }
 
-                portfolioRow
+                terminalTab
+                    .tabItem { Label("Terminal", systemImage: "terminal") }
 
-                Divider()
-
-                settingRow(
-                    title: "Launch at startup",
-                    subtitle: "Start Localhost automatically when you log in.",
-                    binding: $launchAtStartup
-                )
-                .onChange(of: launchAtStartup) { _, enabled in
-                    if enabled { try? SMAppService.mainApp.register() }
-                    else { try? SMAppService.mainApp.unregister() }
-                }
-
-                Divider()
-
-                settingRow(
-                    title: "Menu bar quick launch",
-                    subtitle: "Access your apps from the menu bar.",
-                    binding: $menuBarQuickLaunch
-                )
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    settingRow(
-                        title: "go/ links",
-                        subtitle: "Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.",
-                        binding: $goLinksEnabled
-                    )
-                    .onChange(of: goLinksEnabled) { _, enabled in
-                        model.setGoLinksEnabled(enabled)
-                    }
-
-                    if goLinksEnabled {
-                        if goLinksSystemSetup {
-                            HStack {
-                                Label("System routing active — go/alias works in any browser.", systemImage: "checkmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                                Spacer()
-                                Button(isSettingUp ? "Reinstalling…" : "Reinstall") {
-                                    Task { await runSetup() }
-                                }
-                                .font(.caption)
-                                .disabled(isSettingUp)
-                            }
-                        } else {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("One-time setup required. Adds a local hostname and installs a port forwarder so go/alias works in any browser. Requires your password once.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                HStack {
-                                    Button(isSettingUp ? "Setting up…" : "Setup System") {
-                                        Task { await runSetup() }
-                                    }
-                                    .disabled(isSettingUp)
-                                    if let err = setupError {
-                                        Text(err).font(.caption).foregroundStyle(.red)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Divider()
-
-                settingRow(
-                    title: "Use external Terminal.app",
-                    subtitle: "Open the terminal button in macOS Terminal.app instead of a tab inside OpenPort.",
-                    binding: $useExternalTerminal
-                )
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Terminal profile")
-                        .fontWeight(.medium)
-                    Text("Theme and font size for in-app terminal tabs.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    HStack {
-                        Text("Theme")
-                            .frame(width: 90, alignment: .leading)
-                        Picker("", selection: $terminalTheme) {
-                            ForEach(TerminalThemeID.allCases) { theme in
-                                Text(theme.displayName).tag(theme.rawValue)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .onChange(of: terminalTheme) { _, _ in
-                            terminalStore.applyAppearance()
-                        }
-                        Spacer()
-                    }
-
-                    HStack {
-                        Text("Font size")
-                            .frame(width: 90, alignment: .leading)
-                        Slider(value: $terminalFontSize, in: 10...20, step: 1) {
-                            EmptyView()
-                        }
-                        .frame(maxWidth: 220)
-                        .onChange(of: terminalFontSize) { _, _ in
-                            terminalStore.applyAppearance()
-                        }
-                        Text("\(Int(terminalFontSize)) pt")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 40, alignment: .trailing)
-                    }
-                }
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Action buttons")
-                        .fontWeight(.medium)
-                    Text("Hide buttons you don't use to keep rows compact.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    actionToggle("Open in browser", systemImage: "globe", binding: $showActionBrowser)
-                    actionToggle("Copy network URL", systemImage: "doc.on.doc", binding: $showActionCopy)
-                    actionToggle("QR code", systemImage: "qrcode", binding: $showActionQR)
-                    actionToggle("View live logs", systemImage: "doc.text.magnifyingglass", binding: $showActionLogs)
-                    actionToggle("Open in Terminal", systemImage: "terminal", binding: $showActionTerminal)
-                    actionToggle("Open in VS Code", systemImage: "chevron.left.forwardslash.chevron.right", binding: $showActionEditor)
-                    actionToggle("Open in Finder", systemImage: "folder", binding: $showActionFinder)
-                }
+                rowsTab
+                    .tabItem { Label("Rows", systemImage: "list.bullet") }
             }
+            .padding(20)
 
-            Spacer()
+            Divider()
 
             HStack {
                 Button {
@@ -188,14 +60,160 @@ struct SettingsView: View {
                 }
                 .keyboardShortcut(.return)
             }
-            .padding(.top, 20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
         }
         .sheet(isPresented: $showWhatsNew) { WhatsNewSheet() }
-        .padding(28)
-        .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 800 : 740)
+        .frame(width: 500, height: 480)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
         }
+    }
+
+    private var generalTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            portfolioRow
+            Divider()
+            settingRow(
+                title: "Launch at startup",
+                subtitle: "Start Localhost automatically when you log in.",
+                binding: $launchAtStartup
+            )
+            .onChange(of: launchAtStartup) { _, enabled in
+                if enabled { try? SMAppService.mainApp.register() }
+                else { try? SMAppService.mainApp.unregister() }
+            }
+            Divider()
+            settingRow(
+                title: "Menu bar quick launch",
+                subtitle: "Access your apps from the menu bar.",
+                binding: $menuBarQuickLaunch
+            )
+            Spacer()
+        }
+        .padding(.top, 8)
+    }
+
+    private var goLinksTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            settingRow(
+                title: "go/ links",
+                subtitle: "Type http://go/alias in your browser to open any app instantly. Click an app name in the main window to set its alias.",
+                binding: $goLinksEnabled
+            )
+            .onChange(of: goLinksEnabled) { _, enabled in
+                model.setGoLinksEnabled(enabled)
+            }
+
+            if goLinksEnabled {
+                Divider()
+                if goLinksSystemSetup {
+                    HStack {
+                        Label("System routing active — go/alias works in any browser.", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                        Spacer()
+                        Button(isSettingUp ? "Reinstalling…" : "Reinstall") {
+                            Task { await runSetup() }
+                        }
+                        .font(.caption)
+                        .disabled(isSettingUp)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("One-time setup required. Adds a local hostname and installs a port forwarder so go/alias works in any browser. Requires your password once.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button(isSettingUp ? "Setting up…" : "Setup System") {
+                                Task { await runSetup() }
+                            }
+                            .disabled(isSettingUp)
+                            if let err = setupError {
+                                Text(err).font(.caption).foregroundStyle(.red)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer()
+        }
+        .padding(.top, 8)
+    }
+
+    private var terminalTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            settingRow(
+                title: "Use external Terminal.app",
+                subtitle: "Open the terminal button in macOS Terminal.app instead of a tab inside OpenPort.",
+                binding: $useExternalTerminal
+            )
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Terminal profile")
+                    .fontWeight(.medium)
+                Text("Theme and font size for in-app terminal tabs.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    Text("Theme")
+                        .frame(width: 90, alignment: .leading)
+                    Picker("", selection: $terminalTheme) {
+                        ForEach(TerminalThemeID.allCases) { theme in
+                            Text(theme.displayName).tag(theme.rawValue)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .onChange(of: terminalTheme) { _, _ in
+                        terminalStore.applyAppearance()
+                    }
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Font size")
+                        .frame(width: 90, alignment: .leading)
+                    Slider(value: $terminalFontSize, in: 10...20, step: 1) {
+                        EmptyView()
+                    }
+                    .frame(maxWidth: 220)
+                    .onChange(of: terminalFontSize) { _, _ in
+                        terminalStore.applyAppearance()
+                    }
+                    Text("\(Int(terminalFontSize)) pt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                }
+            }
+            Spacer()
+        }
+        .padding(.top, 8)
+    }
+
+    private var rowsTab: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Action buttons")
+                .fontWeight(.medium)
+            Text("Hide buttons you don't use to keep rows compact.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            actionToggle("Open in browser", systemImage: "globe", binding: $showActionBrowser)
+            actionToggle("Copy network URL", systemImage: "doc.on.doc", binding: $showActionCopy)
+            actionToggle("QR code", systemImage: "qrcode", binding: $showActionQR)
+            actionToggle("View live logs", systemImage: "doc.text.magnifyingglass", binding: $showActionLogs)
+            actionToggle("Open in Terminal", systemImage: "terminal", binding: $showActionTerminal)
+            actionToggle("Open in VS Code", systemImage: "chevron.left.forwardslash.chevron.right", binding: $showActionEditor)
+            actionToggle("Open in Finder", systemImage: "folder", binding: $showActionFinder)
+            Spacer()
+        }
+        .padding(.top, 8)
     }
 
     private var portfolioRow: some View {
