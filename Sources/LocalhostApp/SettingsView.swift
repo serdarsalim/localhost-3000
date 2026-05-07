@@ -21,53 +21,109 @@ struct SettingsView: View {
     @State private var isSettingUp = false
     @State private var setupError: String?
     @State private var showWhatsNew = false
+    @State private var selectedSection: SettingsSection = .general
     @Environment(\.dismiss) private var dismiss
+
+    enum SettingsSection: String, CaseIterable, Identifiable {
+        case general, goLinks, terminal, rows
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .general: return "General"
+            case .goLinks: return "go/ links"
+            case .terminal: return "Terminal"
+            case .rows: return "Rows"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .general: return "gearshape"
+            case .goLinks: return "link"
+            case .terminal: return "terminal"
+            case .rows: return "list.bullet"
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            TabView {
-                generalTab
-                    .tabItem { Label("General", systemImage: "gearshape") }
-
-                goLinksTab
-                    .tabItem { Label("go/ links", systemImage: "link") }
-
-                terminalTab
-                    .tabItem { Label("Terminal", systemImage: "terminal") }
-
-                rowsTab
-                    .tabItem { Label("Rows", systemImage: "list.bullet") }
+            HStack(spacing: 0) {
+                sidebar
+                Divider()
+                content
             }
-            .padding(20)
-
             Divider()
-
-            HStack {
-                Button {
-                    showWhatsNew = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                        Text("What's new")
-                    }
-                    .font(.system(size: 12))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                Spacer()
-                Button("Done") {
-                    NSApp.keyWindow?.close()
-                }
-                .keyboardShortcut(.return)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            footer
         }
         .sheet(isPresented: $showWhatsNew) { WhatsNewSheet() }
-        .frame(width: 500, height: 480)
+        .frame(minWidth: 700, idealWidth: 760, minHeight: 460, idealHeight: 520)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
         }
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(SettingsSection.allCases) { section in
+                SettingsSidebarRow(
+                    section: section,
+                    isSelected: selectedSection == section,
+                    action: { selectedSection = section }
+                )
+            }
+            Spacer()
+        }
+        .padding(10)
+        .frame(width: 200)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image(systemName: selectedSection.symbol)
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text(selectedSection.title)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+                .padding(.bottom, 4)
+
+                switch selectedSection {
+                case .general: generalTab
+                case .goLinks: goLinksTab
+                case .terminal: terminalTab
+                case .rows: rowsTab
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var footer: some View {
+        HStack {
+            Button {
+                showWhatsNew = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                    Text("What's new")
+                }
+                .font(.system(size: 12))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            Spacer()
+            Button("Done") {
+                NSApp.keyWindow?.close()
+            }
+            .keyboardShortcut(.return)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
 
     private var generalTab: some View {
@@ -373,5 +429,39 @@ while True:handle(s.accept()[0])
             }
             try? p.run()
         }
+    }
+}
+
+@MainActor
+private struct SettingsSidebarRow: View {
+    let section: SettingsView.SettingsSection
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isHovered = false
+
+    private var background: Color {
+        if isSelected { return Color.accentColor }
+        if isHovered { return Color.primary.opacity(0.08) }
+        return Color.clear
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: section.symbol)
+                    .frame(width: 18)
+                    .foregroundStyle(isSelected ? Color.white : .secondary)
+                Text(section.title)
+                    .foregroundStyle(isSelected ? .white : .primary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
