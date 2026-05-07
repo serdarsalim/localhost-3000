@@ -113,6 +113,13 @@ struct DashboardView: View {
             ProgressView()
                 .scaleEffect(0.55)
                 .opacity(model.isLoading ? 1 : 0)
+            Button { Task { await model.refresh() } } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .keyboardShortcut("r", modifiers: .command)
+            .help("Refresh (⌘R)")
             TextField("Search", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
@@ -128,9 +135,6 @@ struct DashboardView: View {
 
             Divider().frame(height: 14).padding(.horizontal, 4)
 
-            footerIcon("arrow.clockwise", help: "Refresh (⌘R)") { Task { await model.refresh() } }
-                .keyboardShortcut("r", modifiers: .command)
-            footerIcon("folder.badge.gear", help: "Change folder") { pickFolder(model: model) }
             footerIcon("questionmark.circle", help: "Help") { openWindow(id: "help") }
             footerIcon("gearshape", help: "Settings") { openWindow(id: "settings") }
 
@@ -383,7 +387,7 @@ struct WhatsNewSheet: View {
 }
 
 @MainActor
-private func pickFolder(model: AppModel) {
+func pickFolder(model: AppModel) {
     let panel = NSOpenPanel()
     panel.canChooseDirectories = true
     panel.canChooseFiles = false

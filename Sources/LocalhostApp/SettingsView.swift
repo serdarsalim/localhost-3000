@@ -32,6 +32,10 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 16) {
 
+                portfolioRow
+
+                Divider()
+
                 settingRow(
                     title: "Launch at startup",
                     subtitle: "Start Localhost automatically when you log in.",
@@ -191,6 +195,24 @@ struct SettingsView: View {
         .frame(width: 460, height: goLinksEnabled && !goLinksSystemSetup ? 800 : 740)
         .onAppear {
             launchAtStartup = SMAppService.mainApp.status == .enabled
+        }
+    }
+
+    private var portfolioRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Portfolio folder")
+                Text(model.portfolioRoot?.path ?? "No folder selected")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer()
+            Button("Change…") {
+                pickFolder(model: model)
+            }
+            .controlSize(.small)
         }
     }
 
